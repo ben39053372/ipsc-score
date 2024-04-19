@@ -24,6 +24,7 @@ async function getData(
     fetchResults.map(async (result, index) => {
       if (result.status === "fulfilled") {
         const value = await result.value();
+        console.log(value);
         const html = await value.text();
         const dom = new jsdom.JSDOM(html);
 
@@ -91,29 +92,6 @@ async function main() {
   try {
     const getShooterScoreByShooterId = (matchId: number, shooterId: number) => {
       return () =>
-        // fetch(
-        //   `https://portal-hkg.iroascoring.com/portal/verify/${matchId}?shooter=${shooterId}&verify=Verify`,
-        //   {
-        //     headers: {
-        //       accept:
-        //         "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        //       "accept-language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
-        //       "sec-ch-ua": '"Chromium";v="123", "Not:A-Brand";v="8"',
-        //       "sec-ch-ua-mobile": "?0",
-        //       "sec-ch-ua-platform": '"macOS"',
-        //       "sec-fetch-dest": "document",
-        //       "sec-fetch-mode": "navigate",
-        //       "sec-fetch-site": "same-origin",
-        //       "sec-fetch-user": "?1",
-        //       "upgrade-insecure-requests": "1",
-        //       Referer: `https://portal-hkg.iroascoring.com/portal/verify/${matchId}?shooter=${shooterId}&verify=Verify`,
-        //       "Referrer-Policy": "strict-origin-when-cross-origin",
-        //     },
-        //     body: null,
-        //     mode: "same-origin",
-        //     method: "GET",
-        //   }
-        // );
         axios
           .get(
             `https://portal-hkg.iroascoring.com/portal/verify/${matchId}?shooter=${shooterId}&verify=Verify`
@@ -138,7 +116,7 @@ async function main() {
 
     const allResult = await getData(fetchResults);
 
-    // console.log(allResult);
+    console.log(allResult);
   } catch (err) {
     console.error(err);
   }
