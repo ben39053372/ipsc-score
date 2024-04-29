@@ -5,6 +5,9 @@
     "puppeteer": "^22.6.5",
     "typescript": "^5.4.5"
   },
+  "scripts": {
+    "main": "npx ts-node indexV2.ts"
+  },
   "devDependencies": {
     "@types/jsdom": "^21.1.6"
   }
