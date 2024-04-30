@@ -45,7 +45,10 @@ export function calStageScore(
 
 export function calScore(playerMarks: PlayerMark[], stagePoint: number[]) {
   const maxHf = calMaxHf(playerMarks, stagePoint.length);
-  const result = calStageScore(playerMarks, maxHf, stagePoint);
+  const result = calStageScore(playerMarks, maxHf, stagePoint).sort(
+    (a, b) => b.totalScore - a.totalScore
+  );
+
   // console.log(result);
   return result;
 }
