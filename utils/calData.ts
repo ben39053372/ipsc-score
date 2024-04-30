@@ -21,8 +21,8 @@ export function calStageScore(
   return playerMarks.map((pm) => {
     const score = pm.score.map((score) => {
       const stage = parseInt(score.stage || "");
-      const stageMax = maxHf.at(stage);
-      const stagePoint = stagesPoint.at(stage);
+      const stageMax = maxHf.at(stage - 1);
+      const stagePoint = stagesPoint.at(stage - 1);
       const scorePercentage = stageMax
         ? parseFloat(score.factor) / stageMax
         : 0;

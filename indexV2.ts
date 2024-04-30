@@ -1,4 +1,5 @@
 import puppeteer from "puppeteer";
+import fs from "fs";
 
 import { promiseAllInBatches } from "./lib/promiseAllBatches";
 import { genUrls, getData } from "./utils/crawlData";
@@ -8,7 +9,7 @@ const matchId = 105;
 
 const lastShooterId = 258;
 
-const stagesPoint = [60, 120, 90, 55, 80, 120, 155];
+const stagesPoint = [60, 120, 160, 55, 80, 120, 155];
 
 async function main() {
   console.log("run");
@@ -52,6 +53,14 @@ async function main() {
   const result = calScore(
     playerMarks.filter((s) => s.div === "Standard"),
     stagesPoint
+  );
+
+  fs.writeFile(
+    "standard_result.json",
+    JSON.stringify(result, null, 2),
+    (err) => {
+      if (err) console.error(err);
+    }
   );
 
   // console.log("state max: ", stageMax);
