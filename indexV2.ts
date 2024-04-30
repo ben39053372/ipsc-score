@@ -50,18 +50,38 @@ async function main() {
     )
     .filter((i) => !!i);
 
-  const result = calScore(
+  const standardOverallResult = calScore(
     playerMarks.filter((s) => s.div === "Standard"),
     stagesPoint
   );
 
-  fs.writeFile(
-    "standard_result.json",
-    JSON.stringify(result, null, 2),
-    (err) => {
-      if (err) console.error(err);
-    }
+  const openOverallResult = calScore(
+    playerMarks.filter((s) => s.div === "Open"),
+    stagesPoint
   );
+
+  const productionOverallResult = calScore(
+    playerMarks.filter((s) => s.div === "Production"),
+    stagesPoint
+  );
+
+  const classicOverallResult = calScore(
+    playerMarks.filter((s) => s.div === "Classic"),
+    stagesPoint
+  );
+
+  const productionOpticsOverallResult = calScore(
+    playerMarks.filter((s) => s.div === "Production Optics"),
+    stagesPoint
+  );
+
+  // fs.writeFile(
+  //   "standard_result.json",
+  //   JSON.stringify(result, null, 2),
+  //   (err) => {
+  //     if (err) console.error(err);
+  //   }
+  // );
 
   // console.log("state max: ", stageMax);
 }
