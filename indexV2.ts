@@ -44,9 +44,10 @@ async function main() {
 
   const playerMarks = results
     .filter((result) => result.status === "fulfilled")
-    .map(
-      (successResult: PromiseFulfilledResult<PlayerMark>) => successResult.value
-    );
+    .map((successResult) =>
+      successResult.status === "fulfilled" ? successResult.value : undefined
+    )
+    .filter((i) => !!i);
 
   const result = calScore(
     playerMarks.filter((s) => s.div === "Standard"),
