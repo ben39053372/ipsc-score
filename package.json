@@ -1,12 +1,13 @@
 {
   "dependencies": {
+    "@google-cloud/functions-framework": "^3.4.0",
     "axios": "^1.6.8",
     "jsdom": "^24.0.0",
     "puppeteer": "^22.6.5",
     "typescript": "^5.4.5"
   },
   "scripts": {
-    "main": "npx ts-node indexV2.ts"
+    "main": "npx ts-node index.ts"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.6"

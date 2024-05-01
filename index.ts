@@ -1,125 +1,132 @@
-import axios from "axios";
-import jsdom from "jsdom";
+import puppeteer from "puppeteer";
+import fs from "fs";
 
-async function promiseAllInBatches<T>(
-  list: (() => Promise<T>)[],
-  batchSize: number
-): Promise<PromiseSettledResult<() => Promise<T>>[]> {
-  let position = 0;
-  let results: PromiseSettledResult<() => Promise<T>>[] = [];
-  while (position < list.length) {
-    console.log("position:", position);
-    const itemsForBatch = list.slice(position, position + batchSize);
-    results = [...results, ...(await Promise.allSettled(itemsForBatch))];
-    position += batchSize;
-    await new Promise((r) => setTimeout(r, 1500));
-  }
-  return results;
-}
+import functions from "@google-cloud/functions-framework";
 
-async function getData(
-  fetchResults: PromiseSettledResult<() => Promise<Response>>[]
-) {
-  const allResult = await Promise.allSettled(
-    fetchResults.map(async (result, index) => {
-      if (result.status === "fulfilled") {
-        const value = await result.value();
-        console.log(value);
-        const html = await value.text();
-        const dom = new jsdom.JSDOM(html);
+import { promiseAllInBatches } from "./lib/promiseAllBatches";
+import { genUrls, getData } from "./utils/crawlData";
+import { calScore } from "./utils/calData";
 
-        if (html.length <= 150) {
-          console.error("502 bad gateway");
-        }
+const matchId = 105;
 
-        const name = dom.window.document.querySelector(
-          "body > div > form > div.row.mt-6.p-2 > div.col-4"
-        )?.innerHTML;
+const lastShooterId = 258;
 
-        const info = dom.window.document.querySelector(
-          "body > div > form > div.row.mt-6.p-2 > .text-right"
-        )?.innerHTML;
-
-        if (!info) {
-          console.log(html);
-        }
-
-        const tableRowNodeList = dom.window.document.querySelectorAll(
-          "body > div > form > table tr"
-        );
-
-        const rows = Array.from(tableRowNodeList)
-          .map((row) => {
-            const td = row.querySelectorAll("td");
-            return {
-              stage: /\d+/.exec(td[0]?.innerHTML)?.[0],
-              factor: td[1]?.innerHTML,
-              pts: td[2]?.innerHTML,
-              a: td[3]?.innerHTML,
-              c: td[4]?.innerHTML,
-              d: td[5]?.innerHTML,
-              mi: td[6]?.innerHTML,
-              ns: td[7]?.innerHTML,
-              pe: td[8]?.innerHTML,
-              time: td[10]?.innerHTML,
-            };
-          })
-          .slice(1);
-
-        // console.log(`${index}: ${JSON.stringify({ info })}`);
-
-        return {
-          id: index + 1,
-          name: /[a-zA-Z,\s]+/g
-            .exec(name?.replace("\n", "").trim() || "")
-            ?.join()
-            .trim(),
-          div:
-            /DIV: (\w+)/g.exec(info || "")?.[1] ||
-            /DIV: (\w+)/g.exec(info || "")?.[0],
-          class:
-            /CLASSE: (\w+)/g.exec(info || "")?.[1] ||
-            /CLASSE: (\w+)/g.exec(info || "")?.[0],
-          score: rows,
-        };
-      }
-    })
-  );
-  return allResult;
-}
+const stagesPoint = [60, 120, 160, 55, 80, 120, 155];
 
 async function main() {
-  try {
-    const getShooterScoreByShooterId = (matchId: number, shooterId: number) => {
-      return () =>
-        axios
-          .get(
-            `https://portal-hkg.iroascoring.com/portal/verify/${matchId}?shooter=${shooterId}&verify=Verify`
-          )
-          .then((res) => res.data);
-    };
+  console.log("run");
+  console.log("crawl");
+  console.log("matchId: ", matchId);
+  console.log("lastShooterId: ", lastShooterId);
+  console.time("crawl");
 
-    const matchId = 105;
+  const urls = genUrls(lastShooterId, matchId);
 
-    const lastShooterId = 258;
+  const browser = await puppeteer.launch();
 
-    const fetchShooterCallBacks = [];
+  const results = await promiseAllInBatches(
+    urls.map((url, index) => async () => {
+      const page = await browser.newPage();
+      await page.goto(url, { waitUntil: "domcontentloaded" });
+      const html = await page.content();
+      const result = getData(html, index);
+      await page.close();
+      return result;
+    }),
+    40
+  );
 
-    for (let shooterId = 1; shooterId < lastShooterId; shooterId++) {
-      fetchShooterCallBacks.push(
-        getShooterScoreByShooterId(matchId, shooterId)
-      );
-    }
+  await browser.close();
 
-    // const fetchResults = await promiseAllInBatches(fetchShooterCallBacks, 1);
-    const fetchResults = await Promise.allSettled(fetchShooterCallBacks);
+  const failResult = results.filter((result) => {
+    result.status === "rejected";
+  });
 
-    const allResult = await getData(fetchResults);
+  console.log("result fail count: ", failResult.length);
+  console.timeEnd("crawl");
 
-    console.log(allResult);
-  } catch (err) {
-    console.error(err);
-  }
+  const playerMarks = results
+    .filter((result) => result.status === "fulfilled")
+    .map((successResult) =>
+      successResult.status === "fulfilled" ? successResult.value : undefined
+    )
+    .filter((i) => !!i);
+
+  const filters = {
+    // standard
+    standardOverAll: (s: PlayerMark) => s.div === "Standard",
+    standardLady: (s: PlayerMark) => s.div === "Standard" && s.cat === "Lady",
+    standardJunior: (s: PlayerMark) =>
+      s.div === "Standard" && s.cat === "Junior",
+    standardSenior: (s: PlayerMark) =>
+      s.div === "Standard" && s.cat === "Senior",
+    standardSuperJunior: (s: PlayerMark) =>
+      s.div === "Standard" && s.cat === "S. Junior",
+    standardSuperSenior: (s: PlayerMark) =>
+      s.div === "Standard" && s.cat === "S. Senior",
+    // open
+    openOverAll: (s: PlayerMark) => s.div === "Open",
+    openLady: (s: PlayerMark) => s.div === "Open" && s.cat === "Lady",
+    openJunior: (s: PlayerMark) => s.div === "Open" && s.cat === "Junior",
+    openSenior: (s: PlayerMark) => s.div === "Open" && s.cat === "Senior",
+    openSuperJunior: (s: PlayerMark) =>
+      s.div === "Open" && s.cat === "S. Junior",
+    openSuperSenior: (s: PlayerMark) =>
+      s.div === "Open" && s.cat === "S. Senior",
+    // production
+    productionOverAll: (s: PlayerMark) => s.div === "Production",
+    productionLady: (s: PlayerMark) =>
+      s.div === "Production" && s.cat === "Lady",
+    productionJunior: (s: PlayerMark) =>
+      s.div === "Production" && s.cat === "Junior",
+    productionSenior: (s: PlayerMark) =>
+      s.div === "Production" && s.cat === "Senior",
+    productionSuperJunior: (s: PlayerMark) =>
+      s.div === "Production" && s.cat === "S. Junior",
+    productionSuperSenior: (s: PlayerMark) =>
+      s.div === "Production" && s.cat === "S. Senior",
+    // production optics
+    productionOpticsOverAll: (s: PlayerMark) => s.div === "Production Optics",
+    productionOpticsLady: (s: PlayerMark) =>
+      s.div === "Production Optics" && s.cat === "Lady",
+    productionOpticsJunior: (s: PlayerMark) =>
+      s.div === "Production Optics" && s.cat === "Junior",
+    productionOpticsSenior: (s: PlayerMark) =>
+      s.div === "Production Optics" && s.cat === "Senior",
+    productionOpticsSuperJunior: (s: PlayerMark) =>
+      s.div === "Production Optics" && s.cat === "S. Junior",
+    productionOpticsSuperSenior: (s: PlayerMark) =>
+      s.div === "Production Optics" && s.cat === "S. Senior",
+    // classic
+    classicOverAll: (s: PlayerMark) => s.div === "Classic",
+    classicLady: (s: PlayerMark) => s.div === "Classic" && s.cat === "Lady",
+    classicJunior: (s: PlayerMark) => s.div === "Classic" && s.cat === "Junior",
+    classicSenior: (s: PlayerMark) => s.div === "Classic" && s.cat === "Senior",
+    classicSuperJunior: (s: PlayerMark) =>
+      s.div === "Classic" && s.cat === "S. Junior",
+    classicSuperSenior: (s: PlayerMark) =>
+      s.div === "Classic" && s.cat === "S. Senior",
+  };
+
+  const result = Object.entries(filters)
+    .map(([key, filter]): [string, PlayerMarkWithScore[]] => {
+      return [key, calScore(playerMarks.filter(filter), stagesPoint)];
+    })
+    .reduce((prev, curr) => {
+      const result = prev;
+      result[curr[0]] = curr[1];
+      return result;
+    }, {});
+
+  // fs.writeFile(
+  //   "standard_result.json",
+  //   JSON.stringify(result, null, 2),
+  //   (err) => {
+  //     if (err) console.error(err);
+  //   }
+  // );
+
+  // console.log("state max: ", stageMax);
 }
 
 main();
