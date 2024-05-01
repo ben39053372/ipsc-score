@@ -3,6 +3,7 @@ type PlayerMark = {
   name: string | undefined;
   div: string | undefined;
   class: string | undefined;
+  cat: string | undefined;
   score: {
     stage: string | undefined;
     factor: string;

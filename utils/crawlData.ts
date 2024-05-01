@@ -65,6 +65,9 @@ export function getData(html: string, index: number) {
     class:
       /CLASSE: (\w+)/g.exec(info || "")?.[1] ||
       /CLASSE: (\w+)/g.exec(info || "")?.[0],
+    cat:
+      /CAT:\s+(\w+)/g.exec(info || "")?.[1] ||
+      /CAT:\s+(\w+)/g.exec(info || "")?.[0],
     score: rows,
   };
 }
