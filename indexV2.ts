@@ -50,38 +50,79 @@ async function main() {
     )
     .filter((i) => !!i);
 
-  const standardOverallResult = calScore(
-    playerMarks.filter((s) => s.div === "Standard"),
-    stagesPoint
-  );
+  const filters = {
+    // standard
+    standardOverAll: (s: PlayerMark) => s.div === "Standard",
+    standardLady: (s: PlayerMark) => s.div === "Standard" && s.cat === "Lady",
+    standardJunior: (s: PlayerMark) =>
+      s.div === "Standard" && s.cat === "Junior",
+    standardSenior: (s: PlayerMark) =>
+      s.div === "Standard" && s.cat === "Senior",
+    standardSuperJunior: (s: PlayerMark) =>
+      s.div === "Standard" && s.cat === "S. Junior",
+    standardSuperSenior: (s: PlayerMark) =>
+      s.div === "Standard" && s.cat === "S. Senior",
+    // open
+    openOverAll: (s: PlayerMark) => s.div === "Open",
+    openLady: (s: PlayerMark) => s.div === "Open" && s.cat === "Lady",
+    openJunior: (s: PlayerMark) => s.div === "Open" && s.cat === "Junior",
+    openSenior: (s: PlayerMark) => s.div === "Open" && s.cat === "Senior",
+    openSuperJunior: (s: PlayerMark) =>
+      s.div === "Open" && s.cat === "S. Junior",
+    openSuperSenior: (s: PlayerMark) =>
+      s.div === "Open" && s.cat === "S. Senior",
+    // production
+    productionOverAll: (s: PlayerMark) => s.div === "Production",
+    productionLady: (s: PlayerMark) =>
+      s.div === "Production" && s.cat === "Lady",
+    productionJunior: (s: PlayerMark) =>
+      s.div === "Production" && s.cat === "Junior",
+    productionSenior: (s: PlayerMark) =>
+      s.div === "Production" && s.cat === "Senior",
+    productionSuperJunior: (s: PlayerMark) =>
+      s.div === "Production" && s.cat === "S. Junior",
+    productionSuperSenior: (s: PlayerMark) =>
+      s.div === "Production" && s.cat === "S. Senior",
+    // production optics
+    productionOpticsOverAll: (s: PlayerMark) => s.div === "Production Optics",
+    productionOpticsLady: (s: PlayerMark) =>
+      s.div === "Production Optics" && s.cat === "Lady",
+    productionOpticsJunior: (s: PlayerMark) =>
+      s.div === "Production Optics" && s.cat === "Junior",
+    productionOpticsSenior: (s: PlayerMark) =>
+      s.div === "Production Optics" && s.cat === "Senior",
+    productionOpticsSuperJunior: (s: PlayerMark) =>
+      s.div === "Production Optics" && s.cat === "S. Junior",
+    productionOpticsSuperSenior: (s: PlayerMark) =>
+      s.div === "Production Optics" && s.cat === "S. Senior",
+    // classic
+    classicOverAll: (s: PlayerMark) => s.div === "Classic",
+    classicLady: (s: PlayerMark) => s.div === "Classic" && s.cat === "Lady",
+    classicJunior: (s: PlayerMark) => s.div === "Classic" && s.cat === "Junior",
+    classicSenior: (s: PlayerMark) => s.div === "Classic" && s.cat === "Senior",
+    classicSuperJunior: (s: PlayerMark) =>
+      s.div === "Classic" && s.cat === "S. Junior",
+    classicSuperSenior: (s: PlayerMark) =>
+      s.div === "Classic" && s.cat === "S. Senior",
+  };
 
-  const openOverallResult = calScore(
-    playerMarks.filter((s) => s.div === "Open"),
-    stagesPoint
-  );
+  const result = Object.entries(filters)
+    .map(([key, filter]): [string, PlayerMarkWithScore[]] => {
+      return [key, calScore(playerMarks.filter(filter), stagesPoint)];
+    })
+    .reduce((prev, curr) => {
+      const result = prev;
+      result[curr[0]] = curr[1];
+      return result;
+    }, {});
 
-  const productionOverallResult = calScore(
-    playerMarks.filter((s) => s.div === "Production"),
-    stagesPoint
+  fs.writeFile(
+    "standard_result.json",
+    JSON.stringify(result, null, 2),
+    (err) => {
+      if (err) console.error(err);
+    }
   );
-
-  const classicOverallResult = calScore(
-    playerMarks.filter((s) => s.div === "Classic"),
-    stagesPoint
-  );
-
-  const productionOpticsOverallResult = calScore(
-    playerMarks.filter((s) => s.div === "Production Optics"),
-    stagesPoint
-  );
-
-  // fs.writeFile(
-  //   "standard_result.json",
-  //   JSON.stringify(result, null, 2),
-  //   (err) => {
-  //     if (err) console.error(err);
-  //   }
-  // );
 
   // console.log("state max: ", stageMax);
 }

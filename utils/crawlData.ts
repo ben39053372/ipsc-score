@@ -59,15 +59,9 @@ export function getData(html: string, index: number) {
       .exec(name?.replace("\n", "").trim() || "")
       ?.join()
       .trim(),
-    div:
-      /DIV: (\w+)/g.exec(info || "")?.[1] ||
-      /DIV: (\w+)/g.exec(info || "")?.[0],
-    class:
-      /CLASSE: (\w+)/g.exec(info || "")?.[1] ||
-      /CLASSE: (\w+)/g.exec(info || "")?.[0],
-    cat:
-      /CAT:\s+(\w+)/g.exec(info || "")?.[1] ||
-      /CAT:\s+(\w+)/g.exec(info || "")?.[0],
+    div: /DIV:\s+(.*)CLASSE/g.exec(info || "")?.[1].trim(),
+    class: /CLASSE:\s+(.*)FATOR/g.exec(info || "")?.[1].trim(),
+    cat: /CAT:\s+(.*)/g.exec(info || "")?.[1].trim(),
     score: rows,
   };
 }
