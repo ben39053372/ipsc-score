@@ -7,7 +7,10 @@
     "typescript": "^5.4.5"
   },
   "scripts": {
-    "main": "npx ts-node index.ts"
+    "build": "tsc",
+    "main": "npx ts-node index.ts",
+    "deploy": "gcloud functions deploy getScore --gen2 --region=asia-east2 --runtime=nodejs20 --timeout=500 --memory=2GB --entry-point=getScore --trigger-topic=getScore",
+    "gcp-build": "node node_modules/puppeteer/install.mjs && npm run build"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.6"

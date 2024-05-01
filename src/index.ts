@@ -1,11 +1,13 @@
 import puppeteer from "puppeteer";
 import fs from "fs";
 
-import functions from "@google-cloud/functions-framework";
+// import * as functions from "@google-cloud/functions-framework";
+const functions = require("@google-cloud/functions-framework");
 
 import { promiseAllInBatches } from "./lib/promiseAllBatches";
 import { genUrls, getData } from "./utils/crawlData";
 import { calScore } from "./utils/calData";
+import { CloudEventFunction } from "@google-cloud/functions-framework";
 
 const matchId = 105;
 
@@ -22,7 +24,7 @@ async function main() {
 
   const urls = genUrls(lastShooterId, matchId);
 
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch({ timeout: 0 });
 
   const results = await promiseAllInBatches(
     urls.map((url, index) => async () => {
@@ -129,4 +131,11 @@ async function main() {
   // console.log("state max: ", stageMax);
 }
 
-main();
+// main();
+// functions.cloudEvent("getScore", (cloudEvent) => {
+//   main();
+// });
+
+export const getScore: CloudEventFunction = async (cloudEvent) => {
+  await main();
+};

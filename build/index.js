@@ -30,7 +30,7 @@ function main() {
         console.log("lastShooterId: ", lastShooterId);
         console.time("crawl");
         const urls = (0, crawlData_1.genUrls)(lastShooterId, matchId);
-        const browser = yield puppeteer_1.default.launch({ timeout: 0 });
+        const browser = yield puppeteer_1.default.launch();
         const results = yield (0, promiseAllBatches_1.promiseAllInBatches)(urls.map((url, index) => () => __awaiter(this, void 0, void 0, function* () {
             const page = yield browser.newPage();
             yield page.goto(url, { waitUntil: "domcontentloaded" });
