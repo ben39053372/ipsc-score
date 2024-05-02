@@ -1,13 +1,9 @@
 import puppeteer from "puppeteer";
-import fs from "fs";
-
-// import * as functions from "@google-cloud/functions-framework";
-const functions = require("@google-cloud/functions-framework");
-
 import { promiseAllInBatches } from "./lib/promiseAllBatches";
 import { genUrls, getData } from "./utils/crawlData";
 import { calScore } from "./utils/calData";
 import { CloudEventFunction } from "@google-cloud/functions-framework";
+import { uploadJson } from "./utils/uploadJson";
 
 const matchId = 105;
 
@@ -120,21 +116,11 @@ async function main() {
       return result;
     }, {});
 
-  // fs.writeFile(
-  //   "standard_result.json",
-  //   JSON.stringify(result, null, 2),
-  //   (err) => {
-  //     if (err) console.error(err);
-  //   }
-  // );
-
-  // console.log("state max: ", stageMax);
+  await uploadJson(
+    `result-${matchId}.json`,
+    JSON.stringify(result, null, 2)
+  ).catch(console.error);
 }
-
-// main();
-// functions.cloudEvent("getScore", (cloudEvent) => {
-//   main();
-// });
 
 export const getScore: CloudEventFunction = async (cloudEvent) => {
   await main();

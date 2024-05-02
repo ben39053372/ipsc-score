@@ -14,11 +14,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getScore = void 0;
 const puppeteer_1 = __importDefault(require("puppeteer"));
-// import * as functions from "@google-cloud/functions-framework";
-const functions = require("@google-cloud/functions-framework");
 const promiseAllBatches_1 = require("./lib/promiseAllBatches");
 const crawlData_1 = require("./utils/crawlData");
 const calData_1 = require("./utils/calData");
+const uploadJson_1 = require("./utils/uploadJson");
 const matchId = 105;
 const lastShooterId = 258;
 const stagesPoint = [60, 120, 160, 55, 80, 120, 155];
@@ -95,21 +94,10 @@ function main() {
             result[curr[0]] = curr[1];
             return result;
         }, {});
-        // fs.writeFile(
-        //   "standard_result.json",
-        //   JSON.stringify(result, null, 2),
-        //   (err) => {
-        //     if (err) console.error(err);
-        //   }
-        // );
-        // console.log("state max: ", stageMax);
+        (0, uploadJson_1.uploadJson)(`result-${matchId}`, JSON.stringify(result, null, 2)).catch(console.error);
     });
 }
-// main();
-// functions.cloudEvent("getScore", (cloudEvent) => {
-//   main();
-// });
-const getScore = (cloudEvent) => {
-    main();
-};
+const getScore = (cloudEvent) => __awaiter(void 0, void 0, void 0, function* () {
+    yield main();
+});
 exports.getScore = getScore;
