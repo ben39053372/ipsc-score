@@ -5,6 +5,7 @@ export async function uploadJson(name: string, contents: string) {
   const destFileName = name;
   const storage = new Storage();
   await storage.bucket(bucketName).file(destFileName).save(contents);
+  await storage.bucket(bucketName).file(destFileName).makePublic()
   console.log(
     `${destFileName} with contents ${contents} uploaded to ${bucketName}.`
   );
