@@ -18,9 +18,9 @@ const promiseAllBatches_1 = require("./lib/promiseAllBatches");
 const crawlData_1 = require("./utils/crawlData");
 const calData_1 = require("./utils/calData");
 const uploadJson_1 = require("./utils/uploadJson");
-const matchId = 105;
-const lastShooterId = 258;
-const stagesPoint = [60, 120, 160, 55, 80, 120, 155];
+const matchId = 116;
+const lastShooterId = 220;
+const stagesPoint = [150, 160, 90, 60, 50, 80, 60, 70];
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         console.log("run");
@@ -94,7 +94,7 @@ function main() {
             result[curr[0]] = curr[1];
             return result;
         }, {});
-        (0, uploadJson_1.uploadJson)(`result-${matchId}`, JSON.stringify(result, null, 2)).catch(console.error);
+        yield (0, uploadJson_1.uploadJson)(`result-${matchId}.json`, JSON.stringify(result, null, 2)).catch(console.error);
     });
 }
 const getScore = (cloudEvent) => __awaiter(void 0, void 0, void 0, function* () {

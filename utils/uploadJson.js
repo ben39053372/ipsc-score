@@ -17,6 +17,7 @@ function uploadJson(name, contents) {
         const destFileName = name;
         const storage = new storage_1.Storage();
         yield storage.bucket(bucketName).file(destFileName).save(contents);
+        yield storage.bucket(bucketName).file(destFileName).makePublic();
         console.log(`${destFileName} with contents ${contents} uploaded to ${bucketName}.`);
     });
 }
