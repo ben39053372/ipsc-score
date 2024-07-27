@@ -5,11 +5,12 @@ import { calScore } from "./utils/calData";
 import { CloudEventFunction } from "@google-cloud/functions-framework";
 import { uploadJson } from "./utils/uploadJson";
 
-const matchId = 116;
+const matchId = 125;
 
-const lastShooterId = 220;
+const lastShooterId = 251;
 
-const stagesPoint = [150, 160, 90, 60, 50, 80, 60, 70];
+// paper 10, pp 5,
+const stagesPoint = [160, 105, 45, 110, 60, 150];
 
 async function main() {
   console.log("run");
