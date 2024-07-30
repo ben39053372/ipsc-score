@@ -12,16 +12,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getScore = void 0;
+exports.main = void 0;
 const puppeteer_1 = __importDefault(require("puppeteer"));
-// import * as functions from "@google-cloud/functions-framework";
-const functions = require("@google-cloud/functions-framework");
-const promiseAllBatches_1 = require("./lib/promiseAllBatches");
-const crawlData_1 = require("./utils/crawlData");
-const calData_1 = require("./utils/calData");
-const matchId = 105;
-const lastShooterId = 258;
-const stagesPoint = [60, 120, 160, 55, 80, 120, 155];
+const crawlData_1 = require("../utils/crawlData");
+const promiseAllBatches_1 = require("../lib/promiseAllBatches");
+const calData_1 = require("../utils/calData");
+const uploadJson_1 = require("../utils/uploadJson");
+const matchId = 125;
+const lastShooterId = 251;
+// paper 10, pp 5,
+const stagesPoint = [160, 105, 45, 110, 60, 150];
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         console.log("run");
@@ -30,7 +30,7 @@ function main() {
         console.log("lastShooterId: ", lastShooterId);
         console.time("crawl");
         const urls = (0, crawlData_1.genUrls)(lastShooterId, matchId);
-        const browser = yield puppeteer_1.default.launch();
+        const browser = yield puppeteer_1.default.launch({ timeout: 0 });
         const results = yield (0, promiseAllBatches_1.promiseAllInBatches)(urls.map((url, index) => () => __awaiter(this, void 0, void 0, function* () {
             const page = yield browser.newPage();
             yield page.goto(url, { waitUntil: "domcontentloaded" });
@@ -95,21 +95,7 @@ function main() {
             result[curr[0]] = curr[1];
             return result;
         }, {});
-        // fs.writeFile(
-        //   "standard_result.json",
-        //   JSON.stringify(result, null, 2),
-        //   (err) => {
-        //     if (err) console.error(err);
-        //   }
-        // );
-        // console.log("state max: ", stageMax);
+        yield (0, uploadJson_1.uploadJson)(`result-${matchId}.json`, JSON.stringify(result, null, 2)).catch(console.error);
     });
 }
-// main();
-// functions.cloudEvent("getScore", (cloudEvent) => {
-//   main();
-// });
-const getScore = (cloudEvent) => {
-    main();
-};
-exports.getScore = getScore;
+exports.main = main;
