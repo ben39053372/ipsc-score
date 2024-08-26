@@ -24,6 +24,6 @@ export async function getAllMatches() {
     return result;
   });
   console.log({ data });
+  await browser.close();
+  return data;
 }
-
-getAllMatches();
