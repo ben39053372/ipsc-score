@@ -1,6 +1,16 @@
 import puppeteer from "puppeteer";
 
+let cache = {
+  value: null,
+  ttl: null,
+};
+
 export async function getAllMatches() {
+  const currentTime = new Date();
+  if (cache.value && cache.ttl > currentTime) {
+    return cache.value;
+  }
+
   const browser = await puppeteer.launch({
     args: ["--ignore-certificate-errors"],
   });
@@ -25,5 +35,7 @@ export async function getAllMatches() {
   });
   console.log({ data });
   await browser.close();
+  cache.value = data;
+  cache.ttl = new Date(currentTime.getTime() + 2 * 60 * 60 * 1000);
   return data;
 }
