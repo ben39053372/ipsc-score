@@ -25,6 +25,7 @@ export async function main() {
   const results = await promiseAllInBatches(
     urls.map((url, index) => async () => {
       const page = await browser.newPage();
+      await page.setCacheEnabled(false);
       await page.goto(url, { waitUntil: "domcontentloaded" });
       const html = await page.content();
       const result = getData(html, index);
