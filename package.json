@@ -14,7 +14,8 @@
     "deploy": "gcloud functions deploy getScore --gen2 --region=asia-east2 --runtime=nodejs20 --timeout=500 --memory=2GB --entry-point=getScore --trigger-topic=getScore --max-instances=1",
     "deploy-getAllMatches": "gcloud functions deploy getAllMatches --gen2 --region=asia-east2 --runtime=nodejs20 --timeout=500 --memory=1GB --entry-point=getAllMatches --trigger-http",
     "gcp-build": "node node_modules/puppeteer/install.mjs && npm run build",
-    "start-getAllMatches": "npx functions-framework --target=getAllMatches"
+    "start-getAllMatches": "npx functions-framework --target=getAllMatches",
+    "start-getScore": "npx functions-framework --target=getScore --signature-type=cloudevent"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.6"
