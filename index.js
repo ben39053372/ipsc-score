@@ -9,11 +9,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllMatches = exports.getScore = void 0;
+exports.getScore = void 0;
+const functions_framework_1 = require("@google-cloud/functions-framework");
 const main_1 = require("./functions/main");
+const getAllMatches_1 = require("./functions/getAllMatches");
 const getScore = (cloudEvent) => __awaiter(void 0, void 0, void 0, function* () {
     yield (0, main_1.main)();
 });
 exports.getScore = getScore;
-var getAllMatches_1 = require("./functions/getAllMatches");
-Object.defineProperty(exports, "getAllMatches", { enumerable: true, get: function () { return getAllMatches_1.getAllMatches; } });
+(0, functions_framework_1.http)("getAllMatches", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield (0, getAllMatches_1.getAllMatches)();
+    res.json(result);
+}));
