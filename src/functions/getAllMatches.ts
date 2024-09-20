@@ -14,7 +14,7 @@ export async function getAllMatches() {
   const schedulerClient = new v1.CloudSchedulerClient();
   const currentTime = new Date();
   if (cache.value && cache.ttl > currentTime) {
-    // return cache.value;
+    return cache.value;
   }
 
   const browser = await puppeteer.launch({
@@ -41,7 +41,7 @@ export async function getAllMatches() {
   });
   await browser.close();
   cache.value = data;
-  cache.ttl = new Date(currentTime.getTime() + 2 * 60 * 60 * 1000);
+  cache.ttl = new Date(currentTime.getTime() + 60 * 60 * 1000);
 
   const job = await schedulerClient.getJob({ name: jobName });
   console.log(job);
@@ -60,6 +60,23 @@ export async function getAllMatches() {
       },
     },
   });
+
+  const today = new Date();
+  const matchDate = new Date(data[0].date.split("/").reverse().join("-"));
+
+  if (Math.abs(today.getTime() - matchDate.getTime()) < 86400000) {
+    // matchDate
+    const response = await schedulerClient.resumeJob({
+      name: jobName,
+    });
+    console.log("resume job:", { response });
+  } else {
+    // non matchDate
+    const response = await schedulerClient.pauseJob({
+      name: jobName,
+    });
+    console.log("resume job:", { response });
+  }
 
   return data;
 }

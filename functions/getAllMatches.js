@@ -26,7 +26,7 @@ function getAllMatches() {
         const schedulerClient = new scheduler_1.v1.CloudSchedulerClient();
         const currentTime = new Date();
         if (cache.value && cache.ttl > currentTime) {
-            // return cache.value;
+            return cache.value;
         }
         const browser = yield puppeteer_1.default.launch({
             args: ["--ignore-certificate-errors"],
@@ -50,7 +50,7 @@ function getAllMatches() {
         });
         yield browser.close();
         cache.value = data;
-        cache.ttl = new Date(currentTime.getTime() + 2 * 60 * 60 * 1000);
+        cache.ttl = new Date(currentTime.getTime() + 60 * 60 * 1000);
         const job = yield schedulerClient.getJob({ name: jobName });
         console.log(job);
         yield schedulerClient.updateJob({
@@ -63,6 +63,22 @@ function getAllMatches() {
                 },
             },
         });
+        const today = new Date();
+        const matchDate = new Date(data[0].date.split("/").reverse().join("-"));
+        if (Math.abs(today.getTime() - matchDate.getTime()) < 86400000) {
+            // matchDate
+            const response = yield schedulerClient.resumeJob({
+                name: jobName,
+            });
+            console.log("resume job:", { response });
+        }
+        else {
+            // non matchDate
+            const response = yield schedulerClient.pauseJob({
+                name: jobName,
+            });
+            console.log("resume job:", { response });
+        }
         return data;
     });
 }
