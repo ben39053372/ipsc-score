@@ -18,21 +18,23 @@ const crawlData_1 = require("../utils/crawlData");
 const promiseAllBatches_1 = require("../lib/promiseAllBatches");
 const calData_1 = require("../utils/calData");
 const uploadJson_1 = require("../utils/uploadJson");
-const matchId = 125;
-const lastShooterId = 251;
-// paper 10, pp 5,
-const stagesPoint = [160, 105, 45, 110, 60, 150];
-function main() {
-    return __awaiter(this, void 0, void 0, function* () {
+// const matchId = 127;
+// const lastShooterId = 232;
+// // paper 10, pp 5,
+// const stagesPoint = [160, 120, 50, 150, 50, 110];
+function main(matchId_1) {
+    return __awaiter(this, arguments, void 0, function* (matchId, lastShooterId = 250, stagesPoint) {
         console.log("run");
         console.log("crawl");
         console.log("matchId: ", matchId);
         console.log("lastShooterId: ", lastShooterId);
+        console.log("stagesPoint: ", stagesPoint);
         console.time("crawl");
         const urls = (0, crawlData_1.genUrls)(lastShooterId, matchId);
         const browser = yield puppeteer_1.default.launch({ timeout: 0 });
         const results = yield (0, promiseAllBatches_1.promiseAllInBatches)(urls.map((url, index) => () => __awaiter(this, void 0, void 0, function* () {
             const page = yield browser.newPage();
+            yield page.setCacheEnabled(false);
             yield page.goto(url, { waitUntil: "domcontentloaded" });
             const html = yield page.content();
             const result = (0, crawlData_1.getData)(html, index);

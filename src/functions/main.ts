@@ -4,18 +4,23 @@ import { promiseAllInBatches } from "../lib/promiseAllBatches";
 import { calScore } from "../utils/calData";
 import { uploadJson } from "../utils/uploadJson";
 
-const matchId = 127;
+// const matchId = 127;
 
-const lastShooterId = 232;
+// const lastShooterId = 232;
 
-// paper 10, pp 5,
-const stagesPoint = [160, 120, 50, 150, 50, 110];
+// // paper 10, pp 5,
+// const stagesPoint = [160, 120, 50, 150, 50, 110];
 
-export async function main() {
+export async function main(
+  matchId: number,
+  lastShooterId: number = 250,
+  stagesPoint: number[]
+) {
   console.log("run");
   console.log("crawl");
   console.log("matchId: ", matchId);
   console.log("lastShooterId: ", lastShooterId);
+  console.log("stagesPoint: ", stagesPoint);
   console.time("crawl");
 
   const urls = genUrls(lastShooterId, matchId);
@@ -25,6 +30,7 @@ export async function main() {
   const results = await promiseAllInBatches(
     urls.map((url, index) => async () => {
       const page = await browser.newPage();
+      await page.setCacheEnabled(false);
       await page.goto(url, { waitUntil: "domcontentloaded" });
       const html = await page.content();
       const result = getData(html, index);

@@ -1,6 +1,22 @@
 import puppeteer from "puppeteer";
+import { v1 } from "@google-cloud/scheduler";
+
+let cache = {
+  value: null,
+  ttl: null,
+};
+
+const jobName =
+  "projects/ipsc-score-422008/locations/asia-east2/jobs/crawl-ipsc-score-job";
+const topicName = "projects/ipsc-score-422008/topics/getScore";
 
 export async function getAllMatches() {
+  const schedulerClient = new v1.CloudSchedulerClient();
+  const currentTime = new Date();
+  if (cache.value && cache.ttl > currentTime) {
+    // return cache.value;
+  }
+
   const browser = await puppeteer.launch({
     args: ["--ignore-certificate-errors"],
   });
@@ -23,7 +39,27 @@ export async function getAllMatches() {
       });
     return result;
   });
-  console.log({ data });
-}
+  await browser.close();
+  cache.value = data;
+  cache.ttl = new Date(currentTime.getTime() + 2 * 60 * 60 * 1000);
 
-getAllMatches();
+  const job = await schedulerClient.getJob({ name: jobName });
+  console.log(job);
+
+  await schedulerClient.updateJob({
+    job: {
+      name: jobName,
+      schedule: job[0].schedule || "*/5 * * * *",
+      pubsubTarget: {
+        topicName: "projects/ipsc-score-422008/topics/getScore",
+        attributes: {
+          ...job[0].pubsubTarget.attributes,
+          matchId: data[0].matchId,
+          matchName: data[0].matchName,
+        },
+      },
+    },
+  });
+
+  return data;
+}
