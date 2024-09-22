@@ -69,7 +69,7 @@ export async function getAllMatches() {
   const today = new Date();
   const matchDate = new Date(data[0].date.split("/").reverse().join("-"));
 
-  if (Math.abs(today.getTime() - matchDate.getTime()) < 86400000) {
+  if (Math.abs(today.getTime() - matchDate.getTime()) < 86400000 * 2) {
     // matchDate
     const response = await schedulerClient.resumeJob({
       name: jobName,
