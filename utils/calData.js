@@ -19,6 +19,7 @@ function calStageScore(playerMarks, maxHf, stagesPoint) {
             const scorePercentage = stageMax
                 ? parseFloat(score.factor) / stageMax
                 : 0;
+            console.log({ stagePoint, scorePercentage });
             const totalScore = stagePoint ? stagePoint * scorePercentage : 0;
             return Object.assign(Object.assign({}, score), { totalScore,
                 scorePercentage });
