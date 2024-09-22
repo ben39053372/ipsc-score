@@ -9,7 +9,7 @@ function genUrls(lastShooterId, matchId) {
     return Array(lastShooterId)
         .fill(null)
         .map((_, index) => {
-        return `https://portal-hkg.iroascoring.com/portal/verify/${matchId}?shooter=${index + 1}&verify=Verify`;
+        return `https://hkg.ipscess.org/portal/verify/${matchId}?shooter=${index + 1}&verify=Verify`;
     });
 }
 exports.genUrls = genUrls;
