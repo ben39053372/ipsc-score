@@ -3,19 +3,17 @@ import { main } from "./functions/main";
 import { getAllMatches } from "./functions/getAllMatches";
 
 interface CloudEventData {
-  message: {
-    attributes: {
-      matchId: number;
-      lastShooterId: number;
-      stagesPoint: number[];
-    };
+  attributes: {
+    matchId: number;
+    lastShooterId: number;
+    stagesPoint: number[];
   };
 }
 
 export const getScore: CloudEventFunction = async (cloudEvent) => {
   console.log(cloudEvent);
-  console.log((cloudEvent.data as CloudEventData).message.attributes);
-  const attr = (cloudEvent.data as CloudEventData).message.attributes;
+  console.log(cloudEvent.attributes);
+  const attr = (cloudEvent.data as CloudEventData).attributes;
   if (!attr.lastShooterId && !attr.matchId && !attr.stagesPoint) {
     console.error("missing attributes");
     return;

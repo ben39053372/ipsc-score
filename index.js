@@ -15,8 +15,8 @@ const main_1 = require("./functions/main");
 const getAllMatches_1 = require("./functions/getAllMatches");
 const getScore = (cloudEvent) => __awaiter(void 0, void 0, void 0, function* () {
     console.log(cloudEvent);
-    console.log(cloudEvent.data.message.attributes);
-    const attr = cloudEvent.data.message.attributes;
+    console.log(cloudEvent.attributes);
+    const attr = cloudEvent.data.attributes;
     if (!attr.lastShooterId && !attr.matchId && !attr.stagesPoint) {
         console.error("missing attributes");
         return;
