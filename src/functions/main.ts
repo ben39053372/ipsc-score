@@ -3,6 +3,8 @@ import { genUrls, getData } from "../utils/crawlData";
 import { promiseAllInBatches } from "../lib/promiseAllBatches";
 import { calScore } from "../utils/calData";
 import { uploadJson } from "../utils/uploadJson";
+import { getProxyList } from "../utils/getProxyList";
+import useProxy from "puppeteer-page-proxy";
 
 // const matchId = 127;
 
@@ -25,12 +27,16 @@ export async function main(
 
   const urls = genUrls(lastShooterId, matchId);
 
+  const proxyList = await getProxyList();
+
   const browser = await puppeteer.launch({ timeout: 0 });
 
   const results = await promiseAllInBatches(
     urls.map((url, index) => async () => {
       const page = await browser.newPage();
       await page.setCacheEnabled(false);
+      const proxyPageData = await useProxy(page, proxyList[index % 50]);
+      console.log("proxyPageData.ip: ", proxyPageData.ip);
       await page.goto(url, { waitUntil: "domcontentloaded" });
       const html = await page.content();
       const result = getData(html, index);
