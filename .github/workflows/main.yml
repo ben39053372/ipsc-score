@@ -1,0 +1,33 @@
+name: Deploy to Google Cloud Functions
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup GCP credentials
+        env:
+          GCP_CREDENTIALS: ${{ secrets.GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY }}
+        run: |
+          gcloud auth activate-service-account --key-file /home/runner/GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/home/runner/GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY.json
+
+      - name: Deploy Cloud Function
+        uses: google-github-actions/deploy-cloud-function@v2
+        with:
+          project_id: "ipsc-score-422008"
+          region: "asia-east2"
+          name: "getScore"
+          runtime: "nodejs20"
+          entry_point: "getScore"
+          memory_mb: 2048
+          event_trigger_pubsub_topic: "projects/ipsc-score-422008/topics/getScore"
+          timeout: 500
+          max_instances_count: 1
