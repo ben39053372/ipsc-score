@@ -18,6 +18,8 @@ const crawlData_1 = require("../utils/crawlData");
 const promiseAllBatches_1 = require("../lib/promiseAllBatches");
 const calData_1 = require("../utils/calData");
 const uploadJson_1 = require("../utils/uploadJson");
+const getProxyList_1 = require("../utils/getProxyList");
+const puppeteer_page_proxy_1 = __importDefault(require("puppeteer-page-proxy"));
 // const matchId = 127;
 // const lastShooterId = 232;
 // // paper 10, pp 5,
@@ -31,10 +33,13 @@ function main(matchId_1) {
         console.log("stagesPoint: ", stagesPoint);
         console.time("crawl");
         const urls = (0, crawlData_1.genUrls)(lastShooterId, matchId);
+        const proxyList = yield (0, getProxyList_1.getProxyList)();
         const browser = yield puppeteer_1.default.launch({ timeout: 0 });
         const results = yield (0, promiseAllBatches_1.promiseAllInBatches)(urls.map((url, index) => () => __awaiter(this, void 0, void 0, function* () {
             const page = yield browser.newPage();
             yield page.setCacheEnabled(false);
+            const proxyPageData = yield (0, puppeteer_page_proxy_1.default)(page, proxyList[index % 50]);
+            console.log("proxyPageData.ip: ", proxyPageData.ip);
             yield page.goto(url, { waitUntil: "domcontentloaded" });
             const html = yield page.content();
             const result = (0, crawlData_1.getData)(html, index);

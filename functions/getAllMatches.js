@@ -32,7 +32,7 @@ function getAllMatches() {
             args: ["--ignore-certificate-errors"],
         });
         const page = yield browser.newPage();
-        yield page.goto("https://portal-hkg.iroascoring.com/portal", {});
+        yield page.goto("https://hkg.ipscess.org/portal", {});
         const data = yield page.$$eval("body > div > main > div > a", (opts) => {
             const result = opts
                 .map((opt) => opt.outerHTML)

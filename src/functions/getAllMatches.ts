@@ -1,5 +1,6 @@
 import puppeteer from "puppeteer";
 import { v1 } from "@google-cloud/scheduler";
+import { withProxy } from "../utils/withProxy";
 
 let cache = {
   value: null,
@@ -22,7 +23,10 @@ export async function getAllMatches() {
   });
   const page = await browser.newPage();
 
-  await page.goto("https://portal-hkg.iroascoring.com/portal", {});
+  await page.goto(
+    withProxy("https://hkg.ipscess.org/portal", Math.random() * 10 + 1),
+    {}
+  );
 
   const data = await page.$$eval("body > div > main > div > a", (opts) => {
     const result = opts

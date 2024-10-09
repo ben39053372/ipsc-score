@@ -12,6 +12,7 @@ export const getScore: CloudEventFunction = async (cloudEvent) => {
   console.log(cloudEvent);
   console.log(cloudEvent.attributes);
   const attr = cloudEvent.attributes as CloudEventData;
+  console.log({ attr });
   if (!attr.lastShooterId && !attr.matchId && !attr.stagesPoint) {
     console.error("missing attributes");
     return;

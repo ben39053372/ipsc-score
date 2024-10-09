@@ -15,6 +15,7 @@ export function getData(html: string, index: number) {
 
   if (html.length <= 150) {
     console.error("502 bad gateway");
+    throw new Error("502 bad gateway");
   }
 
   const name = dom.window.document.querySelector(
@@ -26,7 +27,9 @@ export function getData(html: string, index: number) {
   )?.innerHTML;
 
   if (!info) {
-    console.log(html);
+    // console.log(html);
+    console.warn(html);
+    throw new Error("info not found");
   }
 
   const tableRowNodeList = dom.window.document.querySelectorAll(
@@ -50,8 +53,6 @@ export function getData(html: string, index: number) {
       };
     })
     .slice(1);
-
-  // console.log(`${index}: ${JSON.stringify({ info })}`);
 
   return {
     id: index + 1,

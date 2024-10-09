@@ -3,8 +3,7 @@ import { genUrls, getData } from "../utils/crawlData";
 import { promiseAllInBatches } from "../lib/promiseAllBatches";
 import { calScore } from "../utils/calData";
 import { uploadJson } from "../utils/uploadJson";
-import { getProxyList } from "../utils/getProxyList";
-import useProxy from "puppeteer-page-proxy";
+import { withProxy } from "../utils/withProxy";
 
 // const matchId = 127;
 
@@ -25,23 +24,27 @@ export async function main(
   console.log("stagesPoint: ", stagesPoint);
   console.time("crawl");
 
-  const urls = genUrls(lastShooterId, matchId);
+  const urls = genUrls(lastShooterId, matchId).map((url, i) =>
+    withProxy(url, i)
+  );
 
-  const proxyList = await getProxyList();
-
-  const browser = await puppeteer.launch({ timeout: 0 });
+  const browser = await puppeteer.launch({ timeout: 0, headless: false });
 
   const results = await promiseAllInBatches(
     urls.map((url, index) => async () => {
       const page = await browser.newPage();
-      await page.setCacheEnabled(false);
-      const proxyPageData = await useProxy(page, proxyList[index % 50]);
-      console.log("proxyPageData.ip: ", proxyPageData.ip);
-      await page.goto(url, { waitUntil: "domcontentloaded" });
-      const html = await page.content();
-      const result = getData(html, index);
-      await page.close();
-      return result;
+      try {
+        await page.setCacheEnabled(false);
+        await page.goto(url, { waitUntil: "domcontentloaded" });
+        const html = await page.content();
+        const result = getData(html, index);
+        await page.close();
+        return result;
+      } catch (err) {
+        console.error(err, index);
+        await page.close();
+        throw err;
+      }
     }),
     40
   );
@@ -49,7 +52,11 @@ export async function main(
   await browser.close();
 
   const failResult = results.filter((result) => {
-    result.status === "rejected";
+    if (result.status === "fulfilled") {
+      return result.value.name == null;
+    } else {
+      return true;
+    }
   });
 
   console.log("result fail count: ", failResult.length);

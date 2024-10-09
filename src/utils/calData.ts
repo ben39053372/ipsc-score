@@ -26,7 +26,6 @@ export function calStageScore(
       const scorePercentage = stageMax
         ? parseFloat(score.factor) / stageMax
         : 0;
-      console.log({ stagePoint, scorePercentage });
 
       const totalScore = stagePoint ? stagePoint * scorePercentage : 0;
       return {
