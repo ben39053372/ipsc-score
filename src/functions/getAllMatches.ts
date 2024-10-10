@@ -43,11 +43,6 @@ export async function getAllMatches() {
       });
     return result;
   });
-  data.unshift({
-    matchId: "45",
-    date: "21/09/2024",
-    matchName: "HKSDU SOETAC CHALLENGE 2024 R2",
-  });
   await browser.close();
   cache.value = data;
   cache.ttl = new Date(currentTime.getTime() + 60 * 60 * 1000);
