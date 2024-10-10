@@ -12,9 +12,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllMatches = void 0;
+exports.getAllMatches = getAllMatches;
 const puppeteer_1 = __importDefault(require("puppeteer"));
 const scheduler_1 = require("@google-cloud/scheduler");
+const withProxy_1 = require("../utils/withProxy");
 let cache = {
     value: null,
     ttl: null,
@@ -32,7 +33,7 @@ function getAllMatches() {
             args: ["--ignore-certificate-errors"],
         });
         const page = yield browser.newPage();
-        yield page.goto("https://hkg.ipscess.org/portal", {});
+        yield page.goto((0, withProxy_1.withProxy)("https://hkg.ipscess.org/portal", Math.random() * 10 + 1), {});
         const data = yield page.$$eval("body > div > main > div > a", (opts) => {
             const result = opts
                 .map((opt) => opt.outerHTML)
@@ -48,11 +49,6 @@ function getAllMatches() {
             });
             return result;
         });
-        data.unshift({
-            matchId: "45",
-            date: "21/09/2024",
-            matchName: "HKSDU SOETAC CHALLENGE 2024 R2",
-        });
         yield browser.close();
         cache.value = data;
         cache.ttl = new Date(currentTime.getTime() + 60 * 60 * 1000);
@@ -61,7 +57,8 @@ function getAllMatches() {
         yield schedulerClient.updateJob({
             job: {
                 name: jobName,
-                schedule: job[0].schedule || "*/5 * * * *",
+                schedule: "*/10 * * * *",
+                timeZone: "Asia/Hong_Kong",
                 pubsubTarget: {
                     topicName: "projects/ipsc-score-422008/topics/getScore",
                     attributes: Object.assign(Object.assign({}, job[0].pubsubTarget.attributes), { matchId: data[0].matchId, matchName: data[0].matchName }),
@@ -87,4 +84,3 @@ function getAllMatches() {
         return data;
     });
 }
-exports.getAllMatches = getAllMatches;

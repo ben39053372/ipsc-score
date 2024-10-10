@@ -53,7 +53,7 @@ export async function getAllMatches() {
   await schedulerClient.updateJob({
     job: {
       name: jobName,
-      schedule: job[0].schedule || "*/5 * * * *",
+      schedule: "*/10 * * * *",
       timeZone: "Asia/Hong_Kong",
       pubsubTarget: {
         topicName: "projects/ipsc-score-422008/topics/getScore",

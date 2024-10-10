@@ -3,7 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getData = exports.genUrls = void 0;
+exports.genUrls = genUrls;
+exports.getData = getData;
 const jsdom_1 = __importDefault(require("jsdom"));
 function genUrls(lastShooterId, matchId) {
     return Array(lastShooterId)
@@ -12,17 +13,19 @@ function genUrls(lastShooterId, matchId) {
         return `https://hkg.ipscess.org/portal/verify/${matchId}?shooter=${index + 1}&verify=Verify`;
     });
 }
-exports.genUrls = genUrls;
 function getData(html, index) {
     var _a, _b, _c, _d, _e, _f;
     const dom = new jsdom_1.default.JSDOM(html);
     if (html.length <= 150) {
         console.error("502 bad gateway");
+        throw new Error("502 bad gateway");
     }
     const name = (_a = dom.window.document.querySelector("body > div > form > div.row.mt-6.p-2 > div.col-4")) === null || _a === void 0 ? void 0 : _a.innerHTML;
     const info = (_b = dom.window.document.querySelector("body > div > form > div.row.mt-6.p-2 > .text-right")) === null || _b === void 0 ? void 0 : _b.innerHTML;
     if (!info) {
-        console.log(html);
+        // console.log(html);
+        console.warn(html);
+        throw new Error("info not found");
     }
     const tableRowNodeList = dom.window.document.querySelectorAll("body > div > form > table tr");
     const rows = Array.from(tableRowNodeList)
@@ -43,7 +46,6 @@ function getData(html, index) {
         };
     })
         .slice(1);
-    // console.log(`${index}: ${JSON.stringify({ info })}`);
     return {
         id: index + 1,
         name: (_c = /[a-zA-Z,\s]+/g
@@ -54,4 +56,3 @@ function getData(html, index) {
         score: rows,
     };
 }
-exports.getData = getData;

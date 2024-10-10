@@ -2,8 +2,7 @@
   "include": ["./src/**/*.ts"],
   "exclude": ["node_modules"],
   "compilerOptions": {
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
+    "allowImportingTsExtensions": false,
     /* Visit https://aka.ms/tsconfig to read more about this file */
 
     /* Projects */

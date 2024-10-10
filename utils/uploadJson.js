@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadJson = void 0;
+exports.uploadJson = uploadJson;
 const storage_1 = require("@google-cloud/storage");
 function uploadJson(name, contents) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -21,4 +21,3 @@ function uploadJson(name, contents) {
         console.log(`${destFileName} with contents ${contents} uploaded to ${bucketName}.`);
     });
 }
-exports.uploadJson = uploadJson;
