@@ -54,6 +54,7 @@ export async function getAllMatches() {
     job: {
       name: jobName,
       schedule: job[0].schedule || "*/5 * * * *",
+      timeZone: "Asia/Hong_Kong",
       pubsubTarget: {
         topicName: "projects/ipsc-score-422008/topics/getScore",
         attributes: {
