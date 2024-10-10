@@ -12,14 +12,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.main = void 0;
+exports.main = main;
 const puppeteer_1 = __importDefault(require("puppeteer"));
 const crawlData_1 = require("../utils/crawlData");
 const promiseAllBatches_1 = require("../lib/promiseAllBatches");
 const calData_1 = require("../utils/calData");
 const uploadJson_1 = require("../utils/uploadJson");
-const getProxyList_1 = require("../utils/getProxyList");
-const puppeteer_page_proxy_1 = __importDefault(require("puppeteer-page-proxy"));
+const withProxy_1 = require("../utils/withProxy");
 // const matchId = 127;
 // const lastShooterId = 232;
 // // paper 10, pp 5,
@@ -32,23 +31,32 @@ function main(matchId_1) {
         console.log("lastShooterId: ", lastShooterId);
         console.log("stagesPoint: ", stagesPoint);
         console.time("crawl");
-        const urls = (0, crawlData_1.genUrls)(lastShooterId, matchId);
-        const proxyList = yield (0, getProxyList_1.getProxyList)();
-        const browser = yield puppeteer_1.default.launch({ timeout: 0 });
+        const urls = (0, crawlData_1.genUrls)(lastShooterId, matchId).map((url, i) => (0, withProxy_1.withProxy)(url, i));
+        const browser = yield puppeteer_1.default.launch({ timeout: 0, headless: false });
         const results = yield (0, promiseAllBatches_1.promiseAllInBatches)(urls.map((url, index) => () => __awaiter(this, void 0, void 0, function* () {
             const page = yield browser.newPage();
-            yield page.setCacheEnabled(false);
-            const proxyPageData = yield (0, puppeteer_page_proxy_1.default)(page, proxyList[index % 50]);
-            console.log("proxyPageData.ip: ", proxyPageData.ip);
-            yield page.goto(url, { waitUntil: "domcontentloaded" });
-            const html = yield page.content();
-            const result = (0, crawlData_1.getData)(html, index);
-            yield page.close();
-            return result;
+            try {
+                yield page.setCacheEnabled(false);
+                yield page.goto(url, { waitUntil: "domcontentloaded" });
+                const html = yield page.content();
+                const result = (0, crawlData_1.getData)(html, index);
+                yield page.close();
+                return result;
+            }
+            catch (err) {
+                console.error(err, index);
+                yield page.close();
+                throw err;
+            }
         })), 40);
         yield browser.close();
         const failResult = results.filter((result) => {
-            result.status === "rejected";
+            if (result.status === "fulfilled") {
+                return result.value.name == null;
+            }
+            else {
+                return true;
+            }
         });
         console.log("result fail count: ", failResult.length);
         console.timeEnd("crawl");
@@ -105,4 +113,3 @@ function main(matchId_1) {
         yield (0, uploadJson_1.uploadJson)(`result-${matchId}.json`, JSON.stringify(result, null, 2)).catch(console.error);
     });
 }
-exports.main = main;

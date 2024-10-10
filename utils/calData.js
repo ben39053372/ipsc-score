@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calScore = exports.calStageScore = exports.calMaxHf = void 0;
+exports.calMaxHf = calMaxHf;
+exports.calStageScore = calStageScore;
+exports.calScore = calScore;
 function calMaxHf(playerMarks, stageCount) {
     return Array(stageCount)
         .fill(null)
@@ -9,7 +11,6 @@ function calMaxHf(playerMarks, stageCount) {
         return parseFloat((stage === null || stage === void 0 ? void 0 : stage.factor) || "0");
     })));
 }
-exports.calMaxHf = calMaxHf;
 function calStageScore(playerMarks, maxHf, stagesPoint) {
     return playerMarks.map((pm) => {
         const score = pm.score.map((score) => {
@@ -19,7 +20,6 @@ function calStageScore(playerMarks, maxHf, stagesPoint) {
             const scorePercentage = stageMax
                 ? parseFloat(score.factor) / stageMax
                 : 0;
-            console.log({ stagePoint, scorePercentage });
             const totalScore = stagePoint ? stagePoint * scorePercentage : 0;
             return Object.assign(Object.assign({}, score), { totalScore,
                 scorePercentage });
@@ -29,11 +29,9 @@ function calStageScore(playerMarks, maxHf, stagesPoint) {
                 .reduce((partialSum, a) => partialSum + a, 0) });
     });
 }
-exports.calStageScore = calStageScore;
 function calScore(playerMarks, stagePoint) {
     const maxHf = calMaxHf(playerMarks, stagePoint.length);
     const result = calStageScore(playerMarks, maxHf, stagePoint).sort((a, b) => b.totalScore - a.totalScore);
     // console.log(result);
     return result;
 }
-exports.calScore = calScore;
