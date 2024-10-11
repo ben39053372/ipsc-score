@@ -24,7 +24,10 @@ export async function getAllMatches() {
   const page = await browser.newPage();
 
   await page.goto(
-    withProxy("https://hkg.ipscess.org/portal", Math.random() * 10 + 1),
+    withProxy(
+      "https://hkg.ipscess.org/portal",
+      Math.floor(Math.random() * 10 + 1)
+    ),
     {}
   );
 
