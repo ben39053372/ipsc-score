@@ -33,7 +33,7 @@ function getAllMatches() {
             args: ["--ignore-certificate-errors"],
         });
         const page = yield browser.newPage();
-        yield page.goto((0, withProxy_1.withProxy)("https://hkg.ipscess.org/portal", Math.random() * 10 + 1), {});
+        yield page.goto((0, withProxy_1.withProxy)("https://hkg.ipscess.org/portal", Math.floor(Math.random() * 10 + 1)), {});
         const data = yield page.$$eval("body > div > main > div > a", (opts) => {
             const result = opts
                 .map((opt) => opt.outerHTML)
