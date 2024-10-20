@@ -22,11 +22,12 @@ jobs:
       - run: yarn build
 
       - name: Setup GCP credentials
-        env:
-          GCP_CREDENTIALS: ${{ secrets.GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY }}
-        run: |
-          gcloud auth activate-service-account --key-file /home/runner/GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY.json
-          export GOOGLE_APPLICATION_CREDENTIALS=/home/runner/GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY.json
+        uses: "google-github-actions/auth@v2"
+        with:
+          credentials_json: "${{ secrets.GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY }}"
+
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v2"
 
       - name: Deploy Cloud Function
         run: yarn deploy
