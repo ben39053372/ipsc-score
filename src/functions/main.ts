@@ -28,7 +28,7 @@ export async function main(
     withProxy(url, i)
   );
 
-  const browser = await puppeteer.launch({ timeout: 0, headless: false });
+  const browser = await puppeteer.launch({ timeout: 0 });
 
   const results = await promiseAllInBatches(
     urls.map((url, index) => async () => {
