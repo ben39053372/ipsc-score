@@ -28,23 +28,23 @@ export async function main(
     withProxy(url, i)
   );
 
-  const browser = await puppeteer.launch({ timeout: 0 });
+  console.log(urls);
+
+  const browser = await puppeteer.launch({
+    timeout: 0,
+    headless: true,
+    args: ["--no-sandbox", "--disabled-setupid-sandbox"],
+  });
 
   const results = await promiseAllInBatches(
     urls.map((url, index) => async () => {
       const page = await browser.newPage();
-      try {
-        await page.setCacheEnabled(false);
-        await page.goto(url, { waitUntil: "domcontentloaded" });
-        const html = await page.content();
-        const result = getData(html, index);
-        await page.close();
-        return result;
-      } catch (err) {
-        console.error(err, index);
-        await page.close();
-        throw err;
-      }
+      await page.setCacheEnabled(false);
+      await page.goto(url, { waitUntil: "domcontentloaded" });
+      const html = await page.content();
+      const result = getData(html, index);
+      await page.close();
+      return result;
     }),
     40
   );

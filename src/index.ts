@@ -17,7 +17,11 @@ export const getScore: CloudEventFunction = async (cloudEvent) => {
     console.error("missing attributes");
     return;
   }
-  await main(attr.matchId, attr.lastShooterId, JSON.parse(attr.stagesPoint));
+  await main(
+    attr.matchId,
+    Number(attr.lastShooterId),
+    JSON.parse(attr.stagesPoint)
+  );
 };
 
 http("getAllMatches", async (req, res) => {

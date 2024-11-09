@@ -22,7 +22,7 @@ const getScore = (cloudEvent) => __awaiter(void 0, void 0, void 0, function* () 
         console.error("missing attributes");
         return;
     }
-    yield (0, main_1.main)(attr.matchId, attr.lastShooterId, JSON.parse(attr.stagesPoint));
+    yield (0, main_1.main)(attr.matchId, Number(attr.lastShooterId), JSON.parse(attr.stagesPoint));
 });
 exports.getScore = getScore;
 (0, functions_framework_1.http)("getAllMatches", (req, res) => __awaiter(void 0, void 0, void 0, function* () {

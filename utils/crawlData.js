@@ -7,11 +7,13 @@ exports.genUrls = genUrls;
 exports.getData = getData;
 const jsdom_1 = __importDefault(require("jsdom"));
 function genUrls(lastShooterId, matchId) {
-    return Array(lastShooterId)
+    const result = Array(lastShooterId)
         .fill(null)
         .map((_, index) => {
         return `https://hkg.ipscess.org/portal/verify/${matchId}?shooter=${index + 1}&verify=Verify`;
     });
+    console.log(result);
+    return result;
 }
 function getData(html, index) {
     var _a, _b, _c, _d, _e, _f;

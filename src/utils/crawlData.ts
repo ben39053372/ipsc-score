@@ -1,13 +1,15 @@
 import jsdom from "jsdom";
 
 export function genUrls(lastShooterId: number, matchId: number) {
-  return Array(lastShooterId)
+  const result = Array(lastShooterId)
     .fill(null)
     .map((_, index) => {
       return `https://hkg.ipscess.org/portal/verify/${matchId}?shooter=${
         index + 1
       }&verify=Verify`;
     });
+  console.log(result);
+  return result;
 }
 
 export function getData(html: string, index: number) {
