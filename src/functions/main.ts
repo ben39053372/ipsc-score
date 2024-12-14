@@ -45,7 +45,8 @@ export async function main(
           req.resourceType() == "stylesheet" ||
           req.resourceType() == "font" ||
           req.resourceType() == "image" ||
-          req.url().endsWith(".js")
+          req.url().endsWith(".js") ||
+          req.url().endsWith(".ico")
         ) {
           req.abort();
         } else {
