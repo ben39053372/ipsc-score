@@ -39,7 +39,21 @@ export async function main(
   const results = await promiseAllInBatches(
     urls.map((url, index) => async () => {
       const page = await browser.newPage();
+      await page.setRequestInterception(true);
+      page.on("request", (req) => {
+        if (
+          req.resourceType() == "stylesheet" ||
+          req.resourceType() == "font" ||
+          req.resourceType() == "image" ||
+          req.url().endsWith(".js")
+        ) {
+          req.abort();
+        } else {
+          req.continue();
+        }
+      });
       await page.setCacheEnabled(false);
+
       await page.goto(url, { waitUntil: "domcontentloaded" });
       const html = await page.content();
       const result = getData(html, index);
