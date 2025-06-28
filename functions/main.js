@@ -40,6 +40,19 @@ function main(matchId_1) {
         });
         const results = yield (0, promiseAllBatches_1.promiseAllInBatches)(urls.map((url, index) => () => __awaiter(this, void 0, void 0, function* () {
             const page = yield browser.newPage();
+            yield page.setRequestInterception(true);
+            page.on("request", (req) => {
+                if (req.resourceType() == "stylesheet" ||
+                    req.resourceType() == "font" ||
+                    req.resourceType() == "image" ||
+                    req.url().endsWith(".js") ||
+                    req.url().endsWith(".ico")) {
+                    req.abort();
+                }
+                else {
+                    req.continue();
+                }
+            });
             yield page.setCacheEnabled(false);
             yield page.goto(url, { waitUntil: "domcontentloaded" });
             const html = yield page.content();

@@ -9,7 +9,8 @@ export async function uploadJson(name: string, contents: string) {
     .file(destFileName)
     .save(contents, {
       metadata: {
-        "Cache-control": "public, max-age=300",
+        gzip: true,
+        cacheControl: "public, max-age=300",
       },
     });
   await storage.bucket(bucketName).file(destFileName).makePublic();

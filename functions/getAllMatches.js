@@ -16,19 +16,12 @@ exports.getAllMatches = getAllMatches;
 const puppeteer_1 = __importDefault(require("puppeteer"));
 const scheduler_1 = require("@google-cloud/scheduler");
 const withProxy_1 = require("../utils/withProxy");
-let cache = {
-    value: null,
-    ttl: null,
-};
+const uploadJson_1 = require("../utils/uploadJson");
 const jobName = "projects/ipsc-score-422008/locations/asia-east2/jobs/crawl-ipsc-score-job";
 const topicName = "projects/ipsc-score-422008/topics/getScore";
 function getAllMatches() {
     return __awaiter(this, void 0, void 0, function* () {
         const schedulerClient = new scheduler_1.v1.CloudSchedulerClient();
-        const currentTime = new Date();
-        if (cache.value && cache.ttl > currentTime) {
-            return cache.value;
-        }
         const browser = yield puppeteer_1.default.launch({
             args: ["--ignore-certificate-errors"],
         });
@@ -49,9 +42,8 @@ function getAllMatches() {
             });
             return result;
         });
+        yield (0, uploadJson_1.uploadMatchJson)(JSON.stringify(data));
         yield browser.close();
-        cache.value = data;
-        cache.ttl = new Date(currentTime.getTime() + 60 * 60 * 1000);
         const job = yield schedulerClient.getJob({ name: jobName });
         console.log(job);
         yield schedulerClient.updateJob({

@@ -10,14 +10,32 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.uploadJson = uploadJson;
+exports.uploadMatchJson = uploadMatchJson;
 const storage_1 = require("@google-cloud/storage");
 function uploadJson(name, contents) {
     return __awaiter(this, void 0, void 0, function* () {
         const bucketName = "ipsc-score";
         const destFileName = name;
         const storage = new storage_1.Storage();
-        yield storage.bucket(bucketName).file(destFileName).save(contents);
+        yield storage
+            .bucket(bucketName)
+            .file(destFileName)
+            .save(contents, {
+            metadata: {
+                "Cache-control": "public, max-age=300",
+            },
+        });
         yield storage.bucket(bucketName).file(destFileName).makePublic();
         console.log(`${destFileName} with contents ${contents} uploaded to ${bucketName}.`);
+    });
+}
+function uploadMatchJson(contents) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const bucketName = "ipsc-score-match";
+        const destFileName = "matches.json";
+        const storage = new storage_1.Storage();
+        yield storage.bucket(bucketName).file(destFileName).save(contents);
+        yield storage.bucket(bucketName).file(destFileName).makePublic();
+        console.log(`matches.json uploaded`);
     });
 }
