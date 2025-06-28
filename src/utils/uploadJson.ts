@@ -15,7 +15,14 @@ export async function uploadMatchJson(contents: string) {
   const bucketName = "ipsc-score-match";
   const destFileName = "matches.json";
   const storage = new Storage();
-  await storage.bucket(bucketName).file(destFileName).save(contents);
+  await storage
+    .bucket(bucketName)
+    .file(destFileName)
+    .save(contents, {
+      metadata: {
+        "Cache-control": "public, max-age=300",
+      },
+    });
   await storage.bucket(bucketName).file(destFileName).makePublic();
   console.log(`matches.json uploaded`);
 }
