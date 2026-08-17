@@ -1,8 +1,5 @@
 {
   "dependencies": {
-    "@google-cloud/functions-framework": "^3.4.2",
-    "@google-cloud/scheduler": "^4.3.0",
-    "@google-cloud/storage": "^7.10.2",
     "axios": "^1.6.8",
     "jsdom": "^24.0.0",
     "puppeteer": "^22.6.5",
