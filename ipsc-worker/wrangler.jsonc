@@ -12,8 +12,7 @@
 	},
 	"triggers": {
 		"crons": [
-			"0 8 * * *", // Run at 8:00 AM every day fetch all matches
-			"*/10 * * * *" // Run every 10 minutes fetch latest match result
+			"0 8 * * *" // Run at 8:00 AM every day fetch all matches
 		]
 	},
 	"upload_source_maps": true,

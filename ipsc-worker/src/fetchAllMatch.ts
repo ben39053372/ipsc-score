@@ -82,7 +82,7 @@ export const fetchAllMatch = async (BROWSER: BrowserRun, DB: D1Database): Promis
     if (haveLiveMatch) {
         const schedule = await client.workers.scripts.schedules.update('ipsc-worker', {
             account_id: '98f216323cb751c81d693ca7dd1a7dca',
-            body: [{ cron: "0 8 * * *" }, { cron: '*/10 * * * *' }],
+            body: [{ cron: "0 8 * * *" }, { cron: "*/10 8-23 * * *" }],
         });
         console.log(schedule.schedules);
     } else {
