@@ -1,20 +1,11 @@
 import * as cheerio from 'cheerio';
 import puppeteer from '@cloudflare/puppeteer';
 
-type ResultRow = {
-    stage: number;
-    factor: string;
-    pts: string;
-    a: string;
-    c: string;
-    d: string;
-    mi: string;
-    ns: string;
-    pe: string;
-    time: string;
-};
+
 
 export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun): Promise<boolean> => {
+
+    let maxStageCount = 0;
     const latestMatch = await DB.prepare(`
         SELECT match_id, href, name, date, club, level, updated_at
         FROM matches
@@ -75,6 +66,19 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
 
     const browser = await puppeteer.launch(BROWSER);
     const page = await browser.newPage();
+    await page.setRequestInterception(true);
+    page.on("request", (req) => {
+        if (req.resourceType() == "stylesheet" ||
+            req.resourceType() == "font" ||
+            req.resourceType() == "image" ||
+            req.url().endsWith(".js") ||
+            req.url().endsWith(".ico")) {
+            req.abort();
+        }
+        else {
+            req.continue();
+        }
+    });
 
     try {
         for (let shooterId = 1; shooterId <= 500; shooterId++) {
@@ -120,7 +124,11 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
                     };
                 })
                 .slice(1)
-                .filter((row): row is ResultRow => Number.isInteger(row.stage) && row.stage > 0);
+                .filter((row): row is ResultRow => Number.isInteger(row.stage));
+            const rowsMaxStage = Math.max(...rows.map(row => row.stage));
+            if (rowsMaxStage > maxStageCount) {
+                maxStageCount = rowsMaxStage;
+            }
             const div = /DIV:\s+(.*)CLASSE/.exec(info)?.[1].trim() || null;
             const className = /CLASSE:\s+(.*)FATOR/.exec(info)?.[1].trim() || null;
             const cat = /CAT:\s+(.*)/.exec(info)?.[1].trim() || null;

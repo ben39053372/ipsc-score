@@ -1,5 +1,6 @@
 import { fetchAllMatch } from "./fetchAllMatch";
 import { fetchLatestMatchResult } from "./fetchLatestMatchResult";
+import { calScore } from "./calculateScore"
 
 /**
  * Welcome to Cloudflare Workers!
@@ -25,9 +26,13 @@ interface Env {
 export default {
 	async fetch(req, env) {
 		const url = new URL(req.url);
-		url.pathname = '/__scheduled';
-		url.searchParams.append('cron', '* * * * *');
-		return new Response(`To test the scheduled handler, ensure you have used the "--test-scheduled" then try running "curl ${url.href}".`);
+
+		const matchId = url.searchParams.get('matchId');
+		if (matchId === null) {
+			return new Response(`Please provide a matchId query parameter, e.g. ?matchId=123`);
+		}
+		const score = await calScore(env.DB, parseInt(matchId));
+		return Response.json(score);
 	},
 
 	// The scheduled handler is invoked at the interval set in our wrangler.jsonc's
