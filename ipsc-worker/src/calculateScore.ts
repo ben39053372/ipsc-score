@@ -93,37 +93,19 @@ export const calScore = async (DB: D1Database, matchId: number) => {
     console.log(stageMaxMeta);
 
     const shooterByGroupWithScore = shooterByGroup.map(({ groupName, groupPlayers }) => {
-        groupPlayers.map((player) => {
-            const stageResult = matchResult.results.filter((r) => r.name === player.name).map(r => ({ ...r, stagePoint: parseFloat(r.factor) / stageMaxMeta.find(m => parseInt(m.stage) === r.stage)!.maxFactor || 1 }));
-            const stagePoint = 
-        })
+        return {
+            groupName, groupResults: groupPlayers.map((player) => {
+                const stageResult = matchResult.results.filter((r) => r.name === player.name).map(r => {
+                    const stageMax = stageMaxMeta.find(f => parseInt(f.stage) === r.stage)
+                    return { ...r, stagePoint: parseFloat(r.factor) / (stageMax ? stageMax.maxFactor : 0) * (stageMax ? stageMax.maxPoint : 0) };
+                });
+                const totalStagePoint = stageResult.map(r => r.stagePoint).reduce((acc, curr) => acc + curr, 0);
+                return { ...player, totalStagePoint, stageResult };
+            }).sort((a, b) => b.totalStagePoint - a.totalStagePoint)
+        }
     })
 
-    shooterByGroup.map(({ groupName, groupPlayers }) => {
-        const stageResults = Array.from({ length: stageCount }, (_, i) => i + 1).map(stage => {
-            const stagePlayers = groupPlayers.filter(stageRow => stageRow.stage === stage).sort((a, b) => parseFloat(a.factor) - parseFloat(b.factor));
-            const stageMaxFactor = stageMaxFactor.find(f => f.stage === stage)?.maxFactor || 0;
-            const stageMaxPoint = (parseInt(stagePlayers[0]?.a) + parseInt(stagePlayers[0]?.c) + parseInt(stagePlayers[0]?.d) + parseInt(stagePlayers[0]?.mi) + parseInt(stagePlayers[0]?.ns) + parseInt(stagePlayers[0]?.pe)) * 5;
-            const stagePlayerResult = stagePlayers.map(player => {
-                const stagePoint = parseFloat(player.factor) / stageMaxFactor * stageMaxPoint;
-                return {
-                    ...player,
-                    stagePoint,
-                }
-            }).sort((a, b) => b.stagePoint - a.stagePoint);
-
-            return { stage, stagePlayerResult };
-        });
-        console.log("stageResult Lenght:", stageResults.length, "stageCount:", stageCount);
-        console.log(groupName, "groupPlayers Length:", groupPlayers.length);
-        const groupResult = shooterList.results.map((shooter) => {
-            const totalStagePoint = stageResults.map(stateResult => stateResult.stagePlayerResult.find(_stagePlayerResult => _stagePlayerResult.name === shooter.name)?.stagePoint || 0).reduce((acc, curr) => acc + curr, 0);
-            return {
-                ...shooter,
-                totalStagePoint,
-            }
-        })
-    })
+    return shooterByGroupWithScore;
 
 
 
