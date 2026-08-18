@@ -1,6 +1,19 @@
 import * as cheerio from 'cheerio';
 import puppeteer from '@cloudflare/puppeteer';
 
+type ResultRow = {
+    stage: number;
+    factor: string;
+    pts: string;
+    a: string;
+    c: string;
+    d: string;
+    mi: string;
+    ns: string;
+    pe: string;
+    time: string;
+};
+
 export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun): Promise<boolean> => {
     const latestMatch = await DB.prepare(`
         SELECT match_id, href, name, date, club, level, updated_at
@@ -8,13 +21,12 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
         ORDER BY match_id DESC
         LIMIT 1
     `).first();
+    console.log("Fetched latest match from D1:", latestMatch);
 
     if (!latestMatch) {
         console.log("No matches found in D1");
         return false;
     }
-
-    console.log("Latest match:", latestMatch);
 
     const matchId = Number(latestMatch.match_id);
     if (!Number.isInteger(matchId) || matchId <= 0) {
@@ -36,6 +48,7 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
         DB.prepare(`
             CREATE TABLE IF NOT EXISTS "${resultTableName}" (
                 name TEXT NOT NULL,
+                shooter_id INTEGER,
                 stage INTEGER NOT NULL,
                 factor TEXT,
                 pts TEXT,
@@ -46,22 +59,37 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
                 ns TEXT,
                 pe TEXT,
                 time TEXT,
+                last_updated_at INTEGER,
                 PRIMARY KEY (name, stage)
             )
         `),
     ]);
 
+    const now = Math.floor(Date.now() / 1000);
+    const recentShooters = await DB.prepare(`
+        SELECT DISTINCT shooter_id
+        FROM "${resultTableName}"
+        WHERE shooter_id IS NOT NULL AND last_updated_at >= ?
+    `).bind(now - 15 * 60).all<{ shooter_id: number }>();
+    const recentShooterIds = new Set(recentShooters.results.map((row) => row.shooter_id));
+
     const browser = await puppeteer.launch(BROWSER);
     const page = await browser.newPage();
 
     try {
-        for (let shooterId = 1; shooterId <= 400; shooterId++) {
+        for (let shooterId = 1; shooterId <= 500; shooterId++) {
+            if (recentShooterIds.has(shooterId)) {
+                console.log(`Shooter ${shooterId} was updated less than 15 minutes ago, skipping.`);
+                continue;
+            }
+
             await page.goto(
                 `https://hkg.as.ipscess.org/portal/verify/${latestMatch.match_id}?shooter=${shooterId}&verify=Verify`,
                 { waitUntil: "domcontentloaded" },
             );
             const html = await page.content();
             if (html.includes("Shooter not found.")) {
+                console.warn(`Shooter ${shooterId} not found`);
                 break;
             }
 
@@ -79,7 +107,7 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
                 .map((row) => {
                     const td = $(row).find("td");
                     return {
-                        stage: /\d+/.exec($(td[0]).html() || "")?.[0],
+                        stage: Number(/\d+/.exec($(td[0]).html() || "")?.[0]),
                         factor: $(td[1]).text().trim(),
                         pts: $(td[2]).text().trim(),
                         a: $(td[3]).text().trim(),
@@ -92,10 +120,27 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
                     };
                 })
                 .slice(1)
-                .filter((row): row is typeof row & { stage: string } => Boolean(row.stage));
+                .filter((row): row is ResultRow => Number.isInteger(row.stage) && row.stage > 0);
             const div = /DIV:\s+(.*)CLASSE/.exec(info)?.[1].trim() || null;
             const className = /CLASSE:\s+(.*)FATOR/.exec(info)?.[1].trim() || null;
             const cat = /CAT:\s+(.*)/.exec(info)?.[1].trim() || null;
+
+            const existingRows = await DB.prepare(`
+                SELECT stage, factor, pts, a, c, d, mi, ns, pe, time
+                FROM "${resultTableName}"
+                WHERE name = ?
+                ORDER BY stage
+            `).bind(name).all<ResultRow>();
+            const resultDataChanged = JSON.stringify(rows) !== JSON.stringify(existingRows.results);
+            if (!resultDataChanged) {
+                await DB.prepare(`
+                    UPDATE "${resultTableName}"
+                    SET shooter_id = ?
+                    WHERE name = ? AND (shooter_id IS NULL OR shooter_id != ?)
+                `).bind(shooterId, name, shooterId).run();
+                console.log(`Shooter ${shooterId} (${name}) data has not changed, skipping update.`);
+                continue;
+            }
 
             const statements = [
                 DB.prepare(`
@@ -109,10 +154,11 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
                 DB.prepare(`DELETE FROM "${resultTableName}" WHERE name = ?`).bind(name),
                 ...rows.map((row) => DB.prepare(`
                     INSERT INTO "${resultTableName}" (
-                        name, stage, factor, pts, a, c, d, mi, ns, pe, time
+                        name, shooter_id, stage, factor, pts, a, c, d, mi, ns, pe, time, last_updated_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT (name, stage) DO UPDATE SET
+                        shooter_id = excluded.shooter_id,
                         factor = excluded.factor,
                         pts = excluded.pts,
                         a = excluded.a,
@@ -121,9 +167,11 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
                         mi = excluded.mi,
                         ns = excluded.ns,
                         pe = excluded.pe,
-                        time = excluded.time
+                        time = excluded.time,
+                        last_updated_at = excluded.last_updated_at
                 `).bind(
                     name,
+                    shooterId,
                     Number(row.stage),
                     row.factor,
                     row.pts,
@@ -134,13 +182,16 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
                     row.ns,
                     row.pe,
                     row.time,
+                    now,
                 )),
             ];
 
             await DB.batch(statements);
+            console.log(`Shooter ${shooterId} (${name}) data updated successfully.`);
         }
     } finally {
         await browser.close();
+        console.log("Browser closed");
     }
 
     return true;

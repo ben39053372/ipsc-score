@@ -13,13 +13,14 @@
 	"triggers": {
 		"crons": [
 			"0 8 * * *", // Run at 8:00 AM every day fetch all matches
-			"*/5 * * * *" // Run every 5 minutes fetch latest match result
+			"*/10 * * * *" // Run every 10 minutes fetch latest match result
 		]
 	},
 	"upload_source_maps": true,
 	// "compatibility_flags": ["nodejs_compat_v2"],
 	"browser": {
-		"binding": "BROWSER"
+		"binding": "BROWSER",
+		"remote": true
 	},
 	"d1_databases": [
 		{
