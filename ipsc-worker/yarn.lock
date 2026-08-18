@@ -571,6 +571,11 @@ cliui@^8.0.1:
     strip-ansi "^6.0.1"
     wrap-ansi "^7.0.0"
 
+cloudflare@^7.0.0:
+  version "7.0.0"
+  resolved "https://registry.yarnpkg.com/cloudflare/-/cloudflare-7.0.0.tgz#cdd2571fc37a9dcfdd458cf198215183d72883e6"
+  integrity sha512-ZU8Yp1biaRRf+i1Hlap/VUwSBeKnOa4kkygIU9naE07JILnHdgLr9Wq/iPEeEf2in0N5m1giTp1ohY+cNQZEGQ==
+
 color-convert@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/color-convert/-/color-convert-2.0.1.tgz#72d3a68d598c9bdb3af2ad1e84f21d896abd4de3"

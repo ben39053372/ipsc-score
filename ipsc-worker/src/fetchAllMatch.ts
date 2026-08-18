@@ -1,4 +1,20 @@
 import * as cheerio from 'cheerio';
+import Cloudflare from 'cloudflare';
+
+const parseMatchDate = (value: string): Date | null => {
+    const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) {
+        return null;
+    }
+
+    const [, day, month, year] = match;
+    const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+    return date.getUTCFullYear() === Number(year)
+        && date.getUTCMonth() === Number(month) - 1
+        && date.getUTCDate() === Number(day)
+        ? date
+        : null;
+};
 
 export const fetchAllMatch = async (BROWSER: BrowserRun, DB: D1Database): Promise<boolean> => {
     const allMatchResultResponse = await BROWSER.quickAction("content", {
@@ -17,6 +33,7 @@ export const fetchAllMatch = async (BROWSER: BrowserRun, DB: D1Database): Promis
             level: $el.find('small').last().text().trim(),
         };
     });
+
     await DB.prepare(`
         CREATE TABLE IF NOT EXISTS matches (
             match_id INTEGER PRIMARY KEY,
@@ -29,26 +46,51 @@ export const fetchAllMatch = async (BROWSER: BrowserRun, DB: D1Database): Promis
         )
     `).run();
 
-    const validMatches = matches.filter((match) => match.matchId > 0);
-    if (validMatches.length > 0) {
-        await DB.batch(validMatches.map((match) => DB.prepare(`
-            INSERT INTO matches (match_id, href, name, date, club, level)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT (match_id) DO UPDATE SET
-                href = excluded.href,
-                name = excluded.name,
-                date = excluded.date,
-                club = excluded.club,
-                level = excluded.level,
-                updated_at = CURRENT_TIMESTAMP
+    await DB.batch(matches.map((match) => DB.prepare(`
+        INSERT INTO matches (match_id, href, name, date, club, level)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT (match_id) DO UPDATE SET
+            href = excluded.href,
+            name = excluded.name,
+            date = excluded.date,
+            club = excluded.club,
+            level = excluded.level,
+            updated_at = CURRENT_TIMESTAMP
         `).bind(
-            match.matchId,
-            match.href,
-            match.name,
-            match.date,
-            match.club,
-            match.level,
-        )));
+        match.matchId,
+        match.href,
+        match.name,
+        match.date,
+        match.club,
+        match.level,
+    )));
+
+    const haveLiveMatch = matches.some((match) => {
+        const matchDate = parseMatchDate(match.date);
+        if (!matchDate) {
+            console.warn(`Match ${match.matchId} (${match.name}) has an invalid date: ${match.date}`);
+            return false;
+        }
+
+        const timeDiff = Date.now() - matchDate.getTime();
+        console.log(`Match ${match.matchId} (${match.name}) date: ${match.date}, timeDiff: ${timeDiff} ms`);
+        return timeDiff < 3 * 86400000 && timeDiff > 0; // 48 hours in milliseconds
+    });
+    const client = new Cloudflare({
+        apiToken: process.env['CLOUDFLARE_API_TOKEN'],
+    });
+    if (haveLiveMatch) {
+        const schedule = await client.workers.scripts.schedules.update('ipsc-worker', {
+            account_id: '98f216323cb751c81d693ca7dd1a7dca',
+            body: [{ cron: "0 8 * * *" }, { cron: '*/10 * * * *' }],
+        });
+        console.log(schedule.schedules);
+    } else {
+        const schedule = await client.workers.scripts.schedules.update('ipsc-worker', {
+            account_id: '98f216323cb751c81d693ca7dd1a7dca',
+            body: [{ cron: "0 8 * * *" }],
+        });
+        console.log(schedule.schedules);
     }
 
 
