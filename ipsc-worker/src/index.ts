@@ -1,5 +1,5 @@
 import { fetchAllMatch } from "./fetchAllMatch";
-import { fetchLatestMatchResult } from "./fetchLatestMatchResult";
+import { fetchLatestMatchResult, fetchMatchResult } from "./fetchLatestMatchResult";
 import { calScore } from "./calculateScore"
 
 type MatchListItem = {
@@ -109,6 +109,56 @@ export default {
 			}
 		}
 
+		const fetchAllMatchPathMatch = pathname.match(/^\/matches\/fetch-all$/);
+		if (fetchAllMatchPathMatch) {
+			try {
+				await fetchAllMatch(env.BROWSER, env.DB);
+				return withCors(Response.json({ message: "All matches fetched successfully" }));
+			} catch (error) {
+				console.error("Failed to fetch all matches", { error });
+				return jsonError(500, "Failed to fetch all matches");
+			}
+		}
+
+		const fetchLastestResultPathMatch = pathname.match(/^\/matches\/latest\/result$/);
+		if (fetchLastestResultPathMatch) {
+			try {
+				const success = await fetchLatestMatchResult(env.DB, env.BROWSER);
+				if (success) {
+					return withCors(Response.json({ message: "Latest match result fetched successfully" }));
+				} else {
+					return jsonError(404, "No matches found to fetch result");
+				}
+			} catch (error) {
+				console.error("Failed to fetch latest match result", { error });
+				return jsonError(500, "Failed to fetch latest match result");
+			}
+		}
+
+		const fetchMatchResultPathMatch = pathname.match(/^\/matches\/(\d+)\/result$/);
+		if (fetchMatchResultPathMatch) {
+			const matchId = Number(fetchMatchResultPathMatch[1]);
+			if (!Number.isInteger(matchId) || matchId <= 0) {
+				return jsonError(400, "Invalid match id");
+			}
+
+			try {
+				const match = await env.DB.prepare(`
+					SELECT match_id, href, name, date, club, level, updated_at
+					FROM matches
+					WHERE match_id = ?
+				`).bind(matchId).first<MatchListItem>();
+				if(match) {
+					await fetchMatchResult(matchId, match.href, env.BROWSER, env.DB);
+					return withCors(Response.json({ message: "Match result fetched successfully" }));
+				} else {
+					return jsonError(404, "Match not found");
+				}
+			} catch(error) {
+				console.error(error)
+				return jsonError(500, "Failed to fetch match result");
+			}
+		}
 		return jsonError(404, "Route not found");
 	},
 

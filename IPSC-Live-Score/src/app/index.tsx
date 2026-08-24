@@ -58,7 +58,7 @@ export default function Index() {
         <Text style={styles.title}>IPSC Live Score</Text>
         <Text style={styles.sectionTitle}>Matches</Text>
         {matchesLoading ? <ActivityIndicator /> : null}
-        {matchesError ? <Text style={styles.errorText}>{matchesError}</Text> : null}
+        {matchesError ? <Text style={styles.errorText}>No Data</Text> : null}
         {!matchesLoading && !matches.length && !matchesError ? (
           <Text style={styles.helpText}>No matches found yet.</Text>
         ) : null}
@@ -78,7 +78,6 @@ export default function Index() {
                   {item.club}
                 </Text>
                 <Text style={styles.matchMeta}>{item.level}</Text>
-                <Text style={styles.openLabel}>Open leaderboard</Text>
               </Pressable>
             );
           }}

@@ -3,7 +3,6 @@ import puppeteer from '@cloudflare/puppeteer';
 
 export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun): Promise<boolean> => {
 
-    let maxStageCount = 0;
     const latestMatch = await DB.prepare(`
         SELECT match_id, href, name, date, club, level, updated_at
         FROM matches
@@ -17,9 +16,15 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
         return false;
     }
 
-    const matchId = Number(latestMatch.match_id);
+    await fetchMatchResult(latestMatch.match_id as number, latestMatch.href as string, BROWSER, DB);
+
+    return true;
+};
+
+export const fetchMatchResult = async (matchId: number, matchUrl: string, BROWSER: BrowserRun, DB: D1Database): Promise<any> => {
+
     if (!Number.isInteger(matchId) || matchId <= 0) {
-        throw new Error(`Invalid match ID: ${latestMatch.match_id}`);
+        throw new Error(`Invalid match ID: ${matchId}`);
     }
 
     const matchTableName = `match-${matchId}`;
@@ -61,7 +66,6 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
         WHERE shooter_id IS NOT NULL AND last_updated_at >= ?
     `).bind(now - 15 * 60).all<{ shooter_id: number }>();
     const recentShooterIds = new Set(recentShooters.results.map((row) => row.shooter_id));
-
     const browser = await puppeteer.launch(BROWSER);
     const page = await browser.newPage();
     await page.setRequestInterception(true);
@@ -79,28 +83,36 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
     });
 
     try {
-        for (let shooterId = 1; shooterId <= 500; shooterId++) {
+        let retryCount = 0;
+        for (let shooterId = 1; shooterId <= 400; shooterId++) {
             if (recentShooterIds.has(shooterId)) {
                 console.log(`Shooter ${shooterId} was updated less than 15 minutes ago, skipping.`);
                 continue;
             }
-            const verifyUrl = new URL(String(latestMatch.href));
-            verifyUrl.pathname = verifyUrl.pathname.replace(/\/portal$/, `/verify/${latestMatch.match_id}`);
+            const verifyUrl = new URL(String(matchUrl));
+            https://hkg.as.ipscess.org/portal/verify/40?shooter=40
+            verifyUrl.pathname = verifyUrl.pathname.replace(/\/portal$/, `/portal/verify/${matchId}`);
             verifyUrl.search = new URLSearchParams({
-                shooter: String(shooterId),
-                verify: "Verify",
+                shooter: String(shooterId)
             }).toString();
+            console.log(verifyUrl.href)
             await page.goto(verifyUrl.href, { waitUntil: "domcontentloaded" });
             const html = await page.content();
             if (html.includes("Shooter not found.")) {
-                console.warn(`Shooter ${shooterId} not found`);
-                break;
+                retryCount++;
+                if (retryCount >= 3) {
+                    console.log(`Shooter ${shooterId} not found, stopping after 5 consecutive not found.`);
+                    break;
+                }
+                console.log(`Shooter ${shooterId} not found, retry count: ${retryCount}`);
+                continue;
             }
 
             const $ = cheerio.load(html);
 
             const rawName = $($("body > div > form > div.row.mt-6.p-2 > div.col-4").get(0)).text().trim();
             const name = rawName.replace(/^\d+\s+/, "").trim();
+            console.log({rawName, name});
             if (!name) {
                 console.warn(`Shooter ${shooterId} has no name`);
                 continue;
@@ -126,10 +138,6 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
                 })
                 .slice(1)
                 .filter((row): row is ResultRow => Number.isInteger(row.stage));
-            const rowsMaxStage = Math.max(...rows.map(row => row.stage));
-            if (rowsMaxStage > maxStageCount) {
-                maxStageCount = rowsMaxStage;
-            }
             const div = /DIV:\s+(.*)CLASSE/.exec(info)?.[1].trim() || null;
             const className = /CLASSE:\s+(.*)FATOR/.exec(info)?.[1].trim() || null;
             const cat = /CAT:\s+(.*)/.exec(info)?.[1].trim() || null;
@@ -202,6 +210,4 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
         await browser.close();
         console.log("Browser closed");
     }
-
-    return true;
-};
+}
