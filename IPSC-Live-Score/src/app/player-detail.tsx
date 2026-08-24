@@ -333,12 +333,6 @@ export default function PlayerDetailScreen() {
 
 
                         {comparePlayer ? (
-                            <>
-                                <Text style={styles.stageTitle}>Stage Comparison</Text>
-                                <View style={styles.compareHeaderRow}>
-                                    <Text style={styles.compareHeaderText}>{player.name} (ID {player.shooter_id ?? "N/A"})</Text>
-                                    <Text style={styles.compareHeaderText}>{comparePlayer.name} (ID {comparePlayer.shooter_id ?? "N/A"})</Text>
-                                </View>
                                 <FlatList
                                     data={comparisonRows}
                                     keyExtractor={(item) => `compare-stage-${item.stage}`}
@@ -389,7 +383,6 @@ export default function PlayerDetailScreen() {
                                         </View>
                                     )}
                                 />
-                            </>
                         ) : (
                             <>
                                 <Text style={styles.stageTitle}>Stage Details</Text>
