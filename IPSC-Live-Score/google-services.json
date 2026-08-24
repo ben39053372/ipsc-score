@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "317042446910",
+    "project_id": "ipsc-live-score",
+    "storage_bucket": "ipsc-live-score.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:317042446910:android:cd37d6041315c71d88f76f",
+        "android_client_info": {
+          "package_name": "com.ben39053372.IPSCLiveScore"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCwWAac5WLuHyYvIG_qM9L0OVm7EUaZAVg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
