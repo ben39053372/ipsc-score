@@ -16,61 +16,63 @@ const getShooterList = async (DB: D1Database, matchId: number) => {
 
 const groupByGroup = {
     // standard
-    standardOverAll: (s: MatchRow) => s.div === "Standard",
-    standardLady: (s: MatchRow) => s.div === "Standard" && s.cat === "Lady",
-    standardJunior: (s: MatchRow) =>
+    "Standard OverAll": (s: MatchRow) => s.div === "Standard",
+    "Standard Lady": (s: MatchRow) => s.div === "Standard" && s.cat === "Lady",
+    "Standard Junior": (s: MatchRow) =>
         s.div === "Standard" && s.cat === "Junior",
-    standardSenior: (s: MatchRow) =>
+    "Standard Senior": (s: MatchRow) =>
         s.div === "Standard" && s.cat === "Senior",
-    standardSuperJunior: (s: MatchRow) =>
+    "Standard Super Junior": (s: MatchRow) =>
         s.div === "Standard" && s.cat === "S. Junior",
-    standardSuperSenior: (s: MatchRow) =>
+    "Standard Super Senior": (s: MatchRow) =>
         s.div === "Standard" && s.cat === "S. Senior",
     // open
-    openOverAll: (s: MatchRow) => s.div === "Open",
-    openLady: (s: MatchRow) => s.div === "Open" && s.cat === "Lady",
-    openJunior: (s: MatchRow) => s.div === "Open" && s.cat === "Junior",
-    openSenior: (s: MatchRow) => s.div === "Open" && s.cat === "Senior",
-    openSuperJunior: (s: MatchRow) =>
+    "Open OverAll": (s: MatchRow) => s.div === "Open",
+    "Open Lady": (s: MatchRow) => s.div === "Open" && s.cat === "Lady",
+    "Open Junior": (s: MatchRow) => s.div === "Open" && s.cat === "Junior",
+    "Open Senior": (s: MatchRow) => s.div === "Open" && s.cat === "Senior",
+    "Open Super Junior": (s: MatchRow) =>
         s.div === "Open" && s.cat === "S. Junior",
-    openSuperSenior: (s: MatchRow) =>
+    "Open Super Senior": (s: MatchRow) =>
         s.div === "Open" && s.cat === "S. Senior",
     // production
-    productionOverAll: (s: MatchRow) => s.div === "Production",
-    productionLady: (s: MatchRow) =>
+    "Production OverAll": (s: MatchRow) => s.div === "Production",
+    "Production Lady": (s: MatchRow) =>
         s.div === "Production" && s.cat === "Lady",
-    productionJunior: (s: MatchRow) =>
+    "Production Junior": (s: MatchRow) =>
         s.div === "Production" && s.cat === "Junior",
-    productionSenior: (s: MatchRow) =>
+    "Production Senior": (s: MatchRow) =>
         s.div === "Production" && s.cat === "Senior",
-    productionSuperJunior: (s: MatchRow) =>
+    "Production Super Junior": (s: MatchRow) =>
         s.div === "Production" && s.cat === "S. Junior",
-    productionSuperSenior: (s: MatchRow) =>
+    "Production Super Senior": (s: MatchRow) =>
         s.div === "Production" && s.cat === "S. Senior",
     // production optics
-    productionOpticsOverAll: (s: MatchRow) => s.div === "Production Optics",
-    productionOpticsLady: (s: MatchRow) =>
+    "Production Optics OverAll": (s: MatchRow) => s.div === "Production Optics",
+    "Production Optics Lady": (s: MatchRow) =>
         s.div === "Production Optics" && s.cat === "Lady",
-    productionOpticsJunior: (s: MatchRow) =>
+    "Production Optics Junior": (s: MatchRow) =>
         s.div === "Production Optics" && s.cat === "Junior",
-    productionOpticsSenior: (s: MatchRow) =>
+    "Production Optics Senior": (s: MatchRow) =>
         s.div === "Production Optics" && s.cat === "Senior",
-    productionOpticsSuperJunior: (s: MatchRow) =>
+    "Production Optics Super Junior": (s: MatchRow) =>
         s.div === "Production Optics" && s.cat === "S. Junior",
-    productionOpticsSuperSenior: (s: MatchRow) =>
+    "Production Optics Super Senior": (s: MatchRow) =>
         s.div === "Production Optics" && s.cat === "S. Senior",
     // classic
-    classicOverAll: (s: MatchRow) => s.div === "Classic",
-    classicLady: (s: MatchRow) => s.div === "Classic" && s.cat === "Lady",
-    classicJunior: (s: MatchRow) => s.div === "Classic" && s.cat === "Junior",
-    classicSenior: (s: MatchRow) => s.div === "Classic" && s.cat === "Senior",
-    classicSuperJunior: (s: MatchRow) =>
+    "Classic OverAll": (s: MatchRow) => s.div === "Classic",
+    "Classic Lady": (s: MatchRow) => s.div === "Classic" && s.cat === "Lady",
+    "Classic Junior": (s: MatchRow) => s.div === "Classic" && s.cat === "Junior",
+    "Classic Senior": (s: MatchRow) => s.div === "Classic" && s.cat === "Senior",
+    "Classic Super Junior": (s: MatchRow) =>
         s.div === "Classic" && s.cat === "S. Junior",
-    classicSuperSenior: (s: MatchRow) =>
+    "Classic Super Senior": (s: MatchRow) =>
         s.div === "Classic" && s.cat === "S. Senior",
 }
 
-export const calScore = async (DB: D1Database, matchId: number) => {
+type GroupName = keyof typeof groupByGroup;
+
+export const calScore = async (DB: D1Database, matchId: number, group?: GroupName) => {
     let stageCount = 0;
     const matchResult = await getResult(DB, matchId);
     if (!matchResult.success) return null;
@@ -78,30 +80,39 @@ export const calScore = async (DB: D1Database, matchId: number) => {
     stageCount = Math.max(...matchResult.results.map(r => r.stage));
     const shooterList = await getShooterList(DB, matchId);
 
-    const shooterByGroup = Object.entries(groupByGroup).map(([groupName, filterFn]) => {
+    const shooterByGroup = Object.entries(groupByGroup).filter(([groupName, _]) => !group || groupName === group).map(([groupName, filterFn]) => {
         const groupPlayers = shooterList.results.filter((row) => filterFn(row));
         return { groupName, groupPlayers };
     });
 
-    const stageMaxMeta = Object.entries(Object.groupBy(matchResult.results, (r) => r.stage)).map(([stage, stageResults]) => {
-        if (!stageResults || stageResults.length === 0) return { stage, maxFactor: 0, maxPoint: 0 };
-        return { stage, maxFactor: Math.max(...stageResults.map(r => parseFloat(r.factor))), maxPoint: (parseInt(stageResults[0].a) + parseInt(stageResults[0].c) + parseInt(stageResults[0].d) + parseInt(stageResults[0].mi) + parseInt(stageResults[0].ns) + parseInt(stageResults[0].pe)) * 5 };
-    });
-
-
-
-    console.log(stageMaxMeta);
 
     const shooterByGroupWithScore = shooterByGroup.map(({ groupName, groupPlayers }) => {
+        const groupResult = matchResult.results.filter(r => groupPlayers.some(p => p.name === r.name))
+        const groupStageMaxMeta = Object.entries(Object.groupBy(groupResult, (r) => r.stage)).map(([stage, stageResults]) => {
+            if (!stageResults || stageResults.length === 0) return { stage, maxFactor: 0, maxPoint: 0 };
+            const factor = [...stageResults.map(r => parseInt(r.pts) / parseFloat(r.time))]
+            return { stage, maxFactor: Math.max(...factor.filter(v => Number.isFinite(v))), maxPoint: (parseInt(stageResults[0].a) + parseInt(stageResults[0].c) + parseInt(stageResults[0].d) + parseInt(stageResults[0].mi) + parseInt(stageResults[0].ns) + parseInt(stageResults[0].pe)) * 5 };
+        })
         return {
             groupName, groupResults: groupPlayers.map((player) => {
                 const stageResult = matchResult.results.filter((r) => r.name === player.name).map(r => {
-                    const stageMax = stageMaxMeta.find(f => parseInt(f.stage) === r.stage)
-                    return { ...r, stagePoint: parseFloat(r.factor) / (stageMax ? stageMax.maxFactor : 0) * (stageMax ? stageMax.maxPoint : 0) };
+                    const stageMax = groupStageMaxMeta.find(f => parseInt(f.stage) === r.stage)
+                    const factor = parseInt(r.pts) / parseFloat(r.time);
+                    return { ...r, stagePoint: ((factor ? factor : 0) / (stageMax ? stageMax.maxFactor : 0) * (stageMax ? stageMax.maxPoint : 0)) };
                 });
                 const totalStagePoint = stageResult.map(r => r.stagePoint).reduce((acc, curr) => acc + curr, 0);
-                return { ...player, totalStagePoint, stageResult };
-            }).sort((a, b) => b.totalStagePoint - a.totalStagePoint)
+                const dq = stageResult.every(r => r.factor === "0.0000" && r.pts != "0")
+                return { ...player, totalStagePoint, stageResult, dq };
+            }).sort((a, b) => {
+                if (a.dq !== b.dq) return a.dq ? 1 : -1;
+                return b.totalStagePoint - a.totalStagePoint;
+            }).map((player, index, sortedArray) => {
+                return {
+                    ...player,
+                    rank: index + 1,
+                    percent: player.totalStagePoint / (sortedArray[0] ? sortedArray[0].totalStagePoint : 1) * 100
+                }
+            })
         }
     })
 
