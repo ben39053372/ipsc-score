@@ -8,7 +8,11 @@
     "scheme": "ipsclivescore",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/ipsc_logo.jpg"
+      "icon": "./assets/ipsc_logo.jpg",
+      "bundleIdentifier": "com.ben39053372.IPSCLiveScore",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
