@@ -8,7 +8,7 @@
     "scheme": "ipsclivescore",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/ipsc_logo.jpg"
     },
     "android": {
       "adaptiveIcon": {

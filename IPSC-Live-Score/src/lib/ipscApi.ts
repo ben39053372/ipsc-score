@@ -1,5 +1,3 @@
-import { Platform } from "react-native";
-
 export type MatchListItem = {
     matchId: number;
     href: string;
@@ -44,10 +42,7 @@ export type ScoreGroup = {
 };
 
 export const getDefaultBaseUrl = () => {
-    if (Platform.OS === "android") {
-        return "http://10.0.2.2:8787";
-    }
-    return "http://localhost:8787";
+    return "https://ipsc-worker.brcs68m5yk.workers.dev";
 };
 
 export const normalizeBaseUrl = (value: string) => value.trim().replace(/\/+$/, "");
