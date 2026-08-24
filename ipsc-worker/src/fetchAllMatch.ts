@@ -1,5 +1,10 @@
 import * as cheerio from 'cheerio';
 import Cloudflare from 'cloudflare';
+import puppeteer from '@cloudflare/puppeteer';
+
+const matchUrls = [
+    'https://hkg.as.ipscess.org/portal',
+];
 
 const parseMatchDate = (value: string): Date | null => {
     const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -17,22 +22,30 @@ const parseMatchDate = (value: string): Date | null => {
 };
 
 export const fetchAllMatch = async (BROWSER: BrowserRun, DB: D1Database): Promise<boolean> => {
-    const allMatchResultResponse = await BROWSER.quickAction("content", {
-        url: "https://hkg.as.ipscess.org/portal",
-    });
-    const html: { result: string } = await allMatchResultResponse.json();
-    const $ = cheerio.load(html.result);
-    const matches = $('body > div > main a.list-group-item.list-group-item-action').toArray().map((el) => {
-        const $el = $(el);
-        return {
-            href: $el.attr('href') ?? '',
-            matchId: Number(($el.attr('href') ?? '').match(/match=(\d+)/)?.[1] ?? 0),
-            name: $el.find('h5.mb-1').text().trim(),
-            date: $el.find('div small').first().text().trim(),
-            club: $el.find('p.mb-1').text().trim(),
-            level: $el.find('small').last().text().trim(),
-        };
-    });
+    const browser = await puppeteer.launch(BROWSER);
+    const page = await browser.newPage();
+    const matches = [];
+
+    try {
+        for (const url of matchUrls) {
+            await page.goto(url, { waitUntil: 'domcontentloaded' });
+            const $ = cheerio.load(await page.content());
+            matches.push(...$('body > div > main a.list-group-item.list-group-item-action').toArray().map((el) => {
+                const $el = $(el);
+                const href = $el.attr('href') ?? '';
+                return {
+                    href: href ? new URL(href, url).href : '',
+                    matchId: Number(href.match(/match=(\d+)/)?.[1] ?? 0),
+                    name: $el.find('h5.mb-1').text().trim(),
+                    date: $el.find('div small').first().text().trim(),
+                    club: $el.find('p.mb-1').text().trim(),
+                    level: $el.find('small').last().text().trim(),
+                };
+            }));
+        }
+    } finally {
+        await browser.close();
+    }
 
     await DB.prepare(`
         CREATE TABLE IF NOT EXISTS matches (

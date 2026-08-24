@@ -86,11 +86,13 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
                 console.log(`Shooter ${shooterId} was updated less than 15 minutes ago, skipping.`);
                 continue;
             }
-
-            await page.goto(
-                `https://hkg.as.ipscess.org/portal/verify/${latestMatch.match_id}?shooter=${shooterId}&verify=Verify`,
-                { waitUntil: "domcontentloaded" },
-            );
+            const verifyUrl = new URL(String(latestMatch.href));
+            verifyUrl.pathname = verifyUrl.pathname.replace(/\/portal$/, `/verify/${latestMatch.match_id}`);
+            verifyUrl.search = new URLSearchParams({
+                shooter: String(shooterId),
+                verify: "Verify",
+            }).toString();
+            await page.goto(verifyUrl.href, { waitUntil: "domcontentloaded" });
             const html = await page.content();
             if (html.includes("Shooter not found.")) {
                 console.warn(`Shooter ${shooterId} not found`);
