@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Keyboard, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { ScoreGroup, ShooterScore, StageResult, fetchScore, getDefaultBaseUrl, normalizeBaseUrl } from "../lib/ipscApi";
 
 const formatScore = (value: number) => value.toFixed(4);
@@ -109,6 +109,7 @@ export default function PlayerDetailScreen() {
         }
 
         setSelectedGroupName(selectableGroups[0].groupName);
+        Keyboard.dismiss();
     }, [initialGroupName, selectableGroups, selectedGroupName]);
 
     const player = useMemo(() => {
@@ -240,7 +241,10 @@ export default function PlayerDetailScreen() {
                         <View style={styles.groupSelectorWrap}>
                             <Pressable
                                 style={styles.groupSelectorButton}
-                                onPress={() => setGroupDropdownOpen((prev) => !prev)}
+                                onPress={() => {
+                                    Keyboard.dismiss();
+                                    setGroupDropdownOpen((prev) => !prev)
+                                }}
                             >
                                 <Text style={styles.groupSelectorButtonText}>{selectedGroupName ?? "Select a group"}</Text>
                                 <Text style={styles.groupSelectorChevron}>{groupDropdownOpen ? "▲" : "▼"}</Text>
@@ -254,6 +258,7 @@ export default function PlayerDetailScreen() {
                                                 key={group.groupName}
                                                 style={[styles.groupOption, selected && styles.groupOptionSelected]}
                                                 onPress={() => {
+                                                    Keyboard.dismiss();
                                                     setSelectedGroupName(group.groupName);
                                                     setGroupDropdownOpen(false);
                                                 }}
@@ -290,7 +295,10 @@ export default function PlayerDetailScreen() {
                         value={compareInput}
                         onChangeText={setCompareInput}
                     />
-                    <Pressable onPress={applyCompare} style={styles.secondaryButton}>
+                    <Pressable onPress={() => {
+                        Keyboard.dismiss();
+                        applyCompare();
+                    }} style={styles.secondaryButton}>
                         <Text style={styles.secondaryButtonText}>Compare</Text>
                     </Pressable>
                 </View>
