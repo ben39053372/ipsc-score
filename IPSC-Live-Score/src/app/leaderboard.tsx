@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, Pressable, SectionList, StyleSheet, Text, View } from "react-native";
+import { AdBanner } from "../components/AdBanner";
 import { ScoreGroup, fetchScore, getDefaultBaseUrl, normalizeBaseUrl } from "../lib/ipscApi";
 
 const formatScore = (value: number) => value.toFixed(4);
@@ -175,6 +176,7 @@ export default function LeaderboardScreen() {
                     )}
                 />
             </View>
+            <AdBanner />
         </View>
     );
 }

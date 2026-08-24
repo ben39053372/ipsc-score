@@ -1,8 +1,12 @@
 import { Stack } from "expo-router";
-import mobileAds from 'react-native-google-mobile-ads';
+import { useEffect } from "react";
+import { initializeAds } from "../lib/ads";
 
 export default function RootLayout() {
-  
+  useEffect(() => {
+    void initializeAds();
+  }, []);
+
   return (
     <Stack>
       <Stack.Screen name="index" options={{ title: "Matches" }} />

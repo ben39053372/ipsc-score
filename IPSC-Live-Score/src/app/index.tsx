@@ -8,6 +8,8 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { AdBanner } from "../components/AdBanner";
+import { showLeaderboardInterstitial } from "../lib/ads";
 import { MatchListItem, fetchMatches, getDefaultBaseUrl } from "../lib/ipscApi";
 
 export default function Index() {
@@ -40,13 +42,15 @@ export default function Index() {
 
   const openLeaderboard = useCallback(
     (match: MatchListItem) => {
-      router.push({
-        pathname: "/leaderboard",
-        params: {
-          matchId: String(match.matchId),
-          baseUrl,
-          matchName: match.name,
-        },
+      showLeaderboardInterstitial(() => {
+        router.push({
+          pathname: "/leaderboard",
+          params: {
+            matchId: String(match.matchId),
+            baseUrl,
+            matchName: match.name,
+          },
+        });
       });
     },
     [router, baseUrl],
@@ -83,6 +87,7 @@ export default function Index() {
           }}
         />
       </View>
+      <AdBanner />
     </View>
   );
 }
