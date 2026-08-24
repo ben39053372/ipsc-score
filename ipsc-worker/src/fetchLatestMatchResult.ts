@@ -1,8 +1,6 @@
 import * as cheerio from 'cheerio';
 import puppeteer from '@cloudflare/puppeteer';
 
-
-
 export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun): Promise<boolean> => {
 
     let maxStageCount = 0;
@@ -101,7 +99,8 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
 
             const $ = cheerio.load(html);
 
-            const name = $($("body > div > form > div.row.mt-6.p-2 > div.col-4").get(0)).text().trim();
+            const rawName = $($("body > div > form > div.row.mt-6.p-2 > div.col-4").get(0)).text().trim();
+            const name = rawName.replace(/^\d+\s+/, "").trim();
             if (!name) {
                 console.warn(`Shooter ${shooterId} has no name`);
                 continue;
