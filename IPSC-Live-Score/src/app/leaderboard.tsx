@@ -149,6 +149,7 @@ export default function LeaderboardScreen() {
                                         matchName,
                                         groupName: selectedGroupName ?? "",
                                         playerName: item.name,
+                                        playerShooterId: item.shooter_id ? String(item.shooter_id) : "",
                                         playerRank: String(item.rank),
                                     },
                                 });
@@ -161,6 +162,7 @@ export default function LeaderboardScreen() {
                                     <Text style={styles.shooterMeta}>
                                         {item.div} · {item.class_name}
                                         {item.cat ? ` · ${item.cat}` : ""}
+                                        {item.shooter_id ? ` · ID ${item.shooter_id}` : ""}
                                     </Text>
                                 </View>
                             </View>

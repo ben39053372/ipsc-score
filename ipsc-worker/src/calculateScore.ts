@@ -8,8 +8,17 @@ const getResult = async (DB: D1Database, matchId: number) => {
 
 const getShooterList = async (DB: D1Database, matchId: number) => {
     const tableName = `match-${matchId}`;
+    const resultTableName = `match-result-${matchId}`;
     const shooterList = await DB.prepare(`
-        SELECT DISTINCT name, div, class_name, cat FROM "${tableName}"
+        SELECT
+            m.name,
+            m.div,
+            m.class_name,
+            m.cat,
+            MAX(r.shooter_id) AS shooter_id
+        FROM "${tableName}" m
+        LEFT JOIN "${resultTableName}" r ON r.name = m.name
+        GROUP BY m.name, m.div, m.class_name, m.cat
     `).all<MatchRow>();
     return shooterList || null;
 }

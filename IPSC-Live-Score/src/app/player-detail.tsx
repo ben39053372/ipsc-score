@@ -14,6 +14,7 @@ export default function PlayerDetailScreen() {
         matchName?: string;
         groupName?: string;
         playerName?: string;
+        playerShooterId?: string;
         playerRank?: string;
     }>();
 
@@ -22,13 +23,14 @@ export default function PlayerDetailScreen() {
     const matchName = params.matchName ?? "Selected match";
     const initialGroupName = params.groupName ?? "";
     const playerName = params.playerName ?? "";
+    const playerShooterId = Number(params.playerShooterId);
     const playerRank = Number(params.playerRank);
 
     const [scoreGroups, setScoreGroups] = useState<ScoreGroup[]>([]);
     const [selectedGroupName, setSelectedGroupName] = useState<string | null>(initialGroupName || null);
     const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
     const [compareInput, setCompareInput] = useState("");
-    const [compareTargetRank, setCompareTargetRank] = useState<number | null>(null);
+    const [compareTargetShooterId, setCompareTargetShooterId] = useState<number | null>(null);
     const [compareError, setCompareError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -40,6 +42,13 @@ export default function PlayerDetailScreen() {
                 return null;
             }
 
+            if (Number.isInteger(playerShooterId) && playerShooterId > 0) {
+                const idMatched = byName.find((item) => item.shooter_id === playerShooterId);
+                if (idMatched) {
+                    return idMatched;
+                }
+            }
+
             if (Number.isInteger(playerRank) && playerRank > 0) {
                 const rankMatched = byName.find((item) => item.rank === playerRank);
                 if (rankMatched) {
@@ -49,7 +58,7 @@ export default function PlayerDetailScreen() {
 
             return byName[0];
         },
-        [playerName, playerRank],
+        [playerName, playerRank, playerShooterId],
     );
 
     const loadPlayerDetail = useCallback(async () => {
@@ -123,11 +132,11 @@ export default function PlayerDetailScreen() {
     }, [selectableGroups, selectedGroupName]);
 
     const comparePlayer = useMemo(() => {
-        if (!selectedGroup || compareTargetRank === null) {
+        if (!selectedGroup || compareTargetShooterId === null) {
             return null;
         }
-        return selectedGroup.groupResults.find((item) => item.rank === compareTargetRank) ?? null;
-    }, [selectedGroup, compareTargetRank]);
+        return selectedGroup.groupResults.find((item) => item.shooter_id === compareTargetShooterId) ?? null;
+    }, [selectedGroup, compareTargetShooterId]);
 
     const comparisonRows = useMemo(() => {
         if (!player || !comparePlayer) {
@@ -154,9 +163,9 @@ export default function PlayerDetailScreen() {
 
     useEffect(() => {
         setCompareInput("");
-        setCompareTargetRank(null);
+        setCompareTargetShooterId(null);
         setCompareError(null);
-    }, [selectedGroupName, player?.name, player?.rank]);
+    }, [selectedGroupName, player?.name, player?.rank, player?.shooter_id]);
 
     const applyCompare = useCallback(() => {
         if (!selectedGroup) {
@@ -166,25 +175,25 @@ export default function PlayerDetailScreen() {
 
         const parsed = Number.parseInt(compareInput.trim(), 10);
         if (!Number.isInteger(parsed) || parsed <= 0) {
-            setCompareError("Please enter a valid shooter number.");
+            setCompareError("Please enter a valid shooter ID.");
             return;
         }
 
-        const target = selectedGroup.groupResults.find((item) => item.rank === parsed);
+        const target = selectedGroup.groupResults.find((item) => item.shooter_id === parsed);
         if (!target) {
-            setCompareError("Shooter number not found in this group.");
-            setCompareTargetRank(null);
+            setCompareError("Shooter ID not found in this group.");
+            setCompareTargetShooterId(null);
             return;
         }
 
-        if (player && target.name === player.name && target.rank === player.rank) {
-            setCompareError("This is the current player. Enter a different shooter number.");
-            setCompareTargetRank(null);
+        if (player && target.shooter_id === player.shooter_id) {
+            setCompareError("This is the current player. Enter a different shooter ID.");
+            setCompareTargetShooterId(null);
             return;
         }
 
         setCompareError(null);
-        setCompareTargetRank(parsed);
+        setCompareTargetShooterId(parsed);
     }, [compareInput, player, selectedGroup]);
 
     const derivedError = useMemo(() => {
@@ -273,11 +282,26 @@ export default function PlayerDetailScreen() {
                 {loading ? <ActivityIndicator /> : null}
                 {derivedError ? <Text style={styles.errorText}>{derivedError}</Text> : null}
 
+                <View style={styles.compareControlRow}>
+                    <TextInput
+                        style={styles.compareInput}
+                        placeholder="Shooter ID"
+                        keyboardType="number-pad"
+                        value={compareInput}
+                        onChangeText={setCompareInput}
+                    />
+                    <Pressable onPress={applyCompare} style={styles.secondaryButton}>
+                        <Text style={styles.secondaryButtonText}>Compare</Text>
+                    </Pressable>
+                </View>
+                {compareError ? <Text style={styles.errorText}>{compareError}</Text> : null}
+
                 {!loading && !derivedError && player ? (
                     <>
                         <View style={styles.playerSummary}>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.playerName}>{player.name}</Text>
+                                <Text style={styles.helpText}>Shooter ID {player.shooter_id ?? "N/A"}</Text>
                                 <Text style={styles.helpText}>Rank #{player.rank}</Text>
                                 {headerMeta ? <Text style={styles.helpText}>{headerMeta}</Text> : null}
                                 <Text style={styles.helpText}>Total: {formatScore(player.totalStagePoint)}</Text>
@@ -288,35 +312,24 @@ export default function PlayerDetailScreen() {
                             {comparePlayer && summaryComparison ? (
                                 <View style={{ flex: 1 }}>
                                     <Text style={styles.playerName}>{comparePlayer.name}</Text>
+                                    <Text style={styles.helpText}>Shooter ID {comparePlayer.shooter_id ?? "N/A"}</Text>
                                     <Text style={styles.helpText}>Rank #{comparePlayer.rank}</Text>
                                     {headerMeta ? <Text style={styles.helpText}>{headerMeta}</Text> : null}
                                     <Text style={styles.helpText}>Total: {formatScore(comparePlayer.totalStagePoint)}</Text>
                                     <Text style={styles.helpText}>Percent: {formatPercent(comparePlayer.percent)}</Text>
-                                    {player.dq ? <Text style={styles.dq}>DQ</Text> : null}
+                                    {comparePlayer.dq ? <Text style={styles.dq}>DQ</Text> : null}
                                 </View>
                             ) : null}
                         </View>
 
-                        <View style={styles.compareControlRow}>
-                            <TextInput
-                                style={styles.compareInput}
-                                placeholder="Shooter number (rank)"
-                                keyboardType="number-pad"
-                                value={compareInput}
-                                onChangeText={setCompareInput}
-                            />
-                            <Pressable onPress={applyCompare} style={styles.secondaryButton}>
-                                <Text style={styles.secondaryButtonText}>Compare</Text>
-                            </Pressable>
-                        </View>
-                        {compareError ? <Text style={styles.errorText}>{compareError}</Text> : null}
+
 
                         {comparePlayer ? (
                             <>
                                 <Text style={styles.stageTitle}>Stage Comparison</Text>
                                 <View style={styles.compareHeaderRow}>
-                                    <Text style={styles.compareHeaderText}>{player.name} (#{player.rank})</Text>
-                                    <Text style={styles.compareHeaderText}>{comparePlayer.name} (#{comparePlayer.rank})</Text>
+                                    <Text style={styles.compareHeaderText}>{player.name} (ID {player.shooter_id ?? "N/A"})</Text>
+                                    <Text style={styles.compareHeaderText}>{comparePlayer.name} (ID {comparePlayer.shooter_id ?? "N/A"})</Text>
                                 </View>
                                 <FlatList
                                     data={comparisonRows}

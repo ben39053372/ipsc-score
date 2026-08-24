@@ -17,4 +17,5 @@ type MatchRow = {
     div: string;
     class_name: string;
     cat: string | null;
+    shooter_id: number | null;
 }

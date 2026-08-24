@@ -26,6 +26,7 @@ export type StageResult = {
 };
 
 export type ShooterScore = {
+    shooter_id: number | null;
     name: string;
     div: string;
     class_name: string;
