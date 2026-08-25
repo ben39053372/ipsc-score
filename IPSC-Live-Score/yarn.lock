@@ -2099,14 +2099,7 @@ expo-build-properties@~57.0.14:
     resolve-from "^5.0.0"
     semver "^7.6.0"
 
-expo-constants@~57.0.13:
-  version "57.0.13"
-  resolved "https://registry.yarnpkg.com/expo-constants/-/expo-constants-57.0.13.tgz#52490b613f9c87805a14431d7b11fccfdae3c638"
-  integrity sha512-eB5AHp7kKxsVIBjTetUgj5WQSw8joI2ekzgTlcUv+Hc0x2t0jZU6IiL4DpyOT2yZQ71n0WJZCkmOKLgxlajIzg==
-  dependencies:
-    "@expo/env" "~2.4.2"
-
-expo-constants@~57.0.14:
+expo-constants@~57.0.13, expo-constants@~57.0.14:
   version "57.0.14"
   resolved "https://registry.yarnpkg.com/expo-constants/-/expo-constants-57.0.14.tgz#f7ddde89923a88f3b53f192b9b282957c4d19e5b"
   integrity sha512-c9WlP18GqXRm/Kaa7rALRbpFvWiuijrXu3C/38iYdHt9lscA8deJhfK7TURRApWLacdzre5mnNmHdEthNeCEjg==
@@ -2186,7 +2179,7 @@ expo-keep-awake@~57.0.1:
   resolved "https://registry.yarnpkg.com/expo-keep-awake/-/expo-keep-awake-57.0.1.tgz#75dfd3d6faeb0f32eb8b670d6b736375fdf2cdb8"
   integrity sha512-28lkFImeXTS+bhAjuCFV7w7tW5bXg27BJVrxv+nC/nyYa86qEa0oFeHwqol6ha5k4pdVDQgBF09GM4A1k76Ssg==
 
-expo-linking@~57.0.7:
+expo-linking@^57.0.7:
   version "57.0.7"
   resolved "https://registry.yarnpkg.com/expo-linking/-/expo-linking-57.0.7.tgz#ffc55d05d3371807bd12fffbe96ae83f69526e87"
   integrity sha512-Ujn4kY0bd1MoJFLYuvIUWamlZH61pkahrUpug3hBtOeS89LDbPyKNjjmWef6+CPTGQfed2PlfuMZuPO1BCrg5w==
@@ -3425,10 +3418,10 @@ react-native-gesture-handler@~2.32.0:
     hoist-non-react-statics "^3.3.0"
     invariant "^2.2.4"
 
-react-native-google-mobile-ads@^16.5.0:
-  version "16.5.0"
-  resolved "https://registry.yarnpkg.com/react-native-google-mobile-ads/-/react-native-google-mobile-ads-16.5.0.tgz#07278430d8b7c7048e049ae493d1515bf548146f"
-  integrity sha512-5x9qieagnvC3UuLbvxb3tUQbr5vSNuGrOvSj/R+UghkcflVz2UbeUcSl41KbAJQAoBkkxPJOqQ+kYxtEQwHgsA==
+react-native-google-mobile-ads@16.3.4:
+  version "16.3.4"
+  resolved "https://registry.yarnpkg.com/react-native-google-mobile-ads/-/react-native-google-mobile-ads-16.3.4.tgz#95156a159887ddddaa208fb519390df26275e7e0"
+  integrity sha512-UDwyymhXZ//AqQVTcnEGD6Nt2M14LNL332jwi9HEHBsGK+N6VKm+IOgsb/b26mtUHxHW+XrQBilbGtiENdrqTA==
   dependencies:
     "@iabtcf/core" "^1.5.6"
     use-deep-compare-effect "^1.8.1"
