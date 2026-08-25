@@ -1,6 +1,8 @@
+import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { fetchAllMatch } from "./fetchAllMatch";
 import { fetchLatestMatchResult, fetchMatchResult } from "./fetchLatestMatchResult";
-import { calScore } from "./calculateScore"
+import { calScore } from "./calculateScore";
 
 type MatchListItem = {
 	matchId: number;
@@ -10,29 +12,6 @@ type MatchListItem = {
 	club: string;
 	level: string;
 	updated_at: string;
-};
-
-const corsHeaders: Record<string, string> = {
-	"Access-Control-Allow-Origin": "*",
-	"Access-Control-Allow-Methods": "GET,OPTIONS",
-	"Access-Control-Allow-Headers": "Content-Type",
-	"Access-Control-Max-Age": "86400",
-};
-
-const withCors = (response: Response): Response => {
-	const headers = new Headers(response.headers);
-	for (const [key, value] of Object.entries(corsHeaders)) {
-		headers.set(key, value);
-	}
-	return new Response(response.body, {
-		status: response.status,
-		statusText: response.statusText,
-		headers,
-	});
-};
-
-const jsonError = (status: number, error: string) => {
-	return withCors(Response.json({ error }, { status }));
 };
 
 /**
@@ -56,21 +35,27 @@ interface Env {
 	DB: D1Database;
 }
 
-export default {
-	async fetch(req, env) {
-		if (req.method === "OPTIONS") {
-			return withCors(new Response(null, { status: 204 }));
-		}
+const app = new Hono<{ Bindings: Env }>();
 
-		if (req.method !== "GET") {
-			return jsonError(405, "Method not allowed");
-		}
+app.use(
+	"*",
+	cors({
+		origin: "*",
+		allowMethods: ["GET", "OPTIONS"],
+		allowHeaders: ["Content-Type"],
+		maxAge: 86400,
+	}),
+);
 
-		const url = new URL(req.url);
-		const pathname = url.pathname;
+app.use("*", async (c, next) => {
+	if (c.req.method !== "GET" && c.req.method !== "OPTIONS") {
+		return c.json({ error: "Method not allowed" }, 405);
+	}
+	await next();
+});
 
-		if (pathname === "/matches") {
-			const result = await env.DB.prepare(`
+app.get("/matches", async (c) => {
+	const result = await c.env.DB.prepare(`
 				SELECT
 					match_id AS matchId,
 					href,
@@ -83,83 +68,82 @@ export default {
 				ORDER BY updated_at DESC, match_id DESC
 			`).all<MatchListItem>();
 
-			if (!result.success) {
-				return jsonError(500, "Failed to fetch matches");
-			}
+	if (!result.success) {
+		return c.json({ error: "Failed to fetch matches" }, 500);
+	}
 
-			return withCors(Response.json(result.results ?? []));
+	return c.json(result.results ?? []);
+});
+
+app.get("/matches/:matchId/score", async (c) => {
+	const matchId = Number(c.req.param("matchId"));
+	if (!Number.isInteger(matchId) || matchId <= 0) {
+		return c.json({ error: "Invalid match id" }, 400);
+	}
+
+	try {
+		const score = await calScore(c.env.DB, matchId);
+		if (score === null) {
+			return c.json({ error: "Match score not found" }, 404);
 		}
+		return c.json(score);
+	} catch (error) {
+		console.error("Failed to fetch match score", { matchId, error });
+		return c.json({ error: "Failed to fetch match score" }, 500);
+	}
+});
 
-		const scorePathMatch = pathname.match(/^\/matches\/(\d+)\/score$/);
-		if (scorePathMatch) {
-			const matchId = Number(scorePathMatch[1]);
-			if (!Number.isInteger(matchId) || matchId <= 0) {
-				return jsonError(400, "Invalid match id");
-			}
+app.get("/matches/fetch-all", async (c) => {
+	try {
+		await fetchAllMatch(c.env.BROWSER, c.env.DB);
+		return c.json({ message: "All matches fetched successfully" });
+	} catch (error) {
+		console.error("Failed to fetch all matches", { error });
+		return c.json({ error: "Failed to fetch all matches" }, 500);
+	}
+});
 
-			try {
-				const score = await calScore(env.DB, matchId);
-				if (score === null) {
-					return jsonError(404, "Match score not found");
-				}
-				return withCors(Response.json(score));
-			} catch (error) {
-				console.error("Failed to fetch match score", { matchId, error });
-				return jsonError(500, "Failed to fetch match score");
-			}
+app.get("/matches/latest/result", async (c) => {
+	try {
+		const success = await fetchLatestMatchResult(c.env.DB, c.env.BROWSER);
+		if (success) {
+			return c.json({ message: "Latest match result fetched successfully" });
 		}
+		return c.json({ error: "No matches found to fetch result" }, 404);
+	} catch (error) {
+		console.error("Failed to fetch latest match result", { error });
+		return c.json({ error: "Failed to fetch latest match result" }, 500);
+	}
+});
 
-		const fetchAllMatchPathMatch = pathname.match(/^\/matches\/fetch-all$/);
-		if (fetchAllMatchPathMatch) {
-			try {
-				await fetchAllMatch(env.BROWSER, env.DB);
-				return withCors(Response.json({ message: "All matches fetched successfully" }));
-			} catch (error) {
-				console.error("Failed to fetch all matches", { error });
-				return jsonError(500, "Failed to fetch all matches");
-			}
-		}
+app.get("/matches/:matchId/result", async (c) => {
+	const matchId = Number(c.req.param("matchId"));
+	if (!Number.isInteger(matchId) || matchId <= 0) {
+		return c.json({ error: "Invalid match id" }, 400);
+	}
 
-		const fetchLastestResultPathMatch = pathname.match(/^\/matches\/latest\/result$/);
-		if (fetchLastestResultPathMatch) {
-			try {
-				const success = await fetchLatestMatchResult(env.DB, env.BROWSER);
-				if (success) {
-					return withCors(Response.json({ message: "Latest match result fetched successfully" }));
-				} else {
-					return jsonError(404, "No matches found to fetch result");
-				}
-			} catch (error) {
-				console.error("Failed to fetch latest match result", { error });
-				return jsonError(500, "Failed to fetch latest match result");
-			}
-		}
-
-		const fetchMatchResultPathMatch = pathname.match(/^\/matches\/(\d+)\/result$/);
-		if (fetchMatchResultPathMatch) {
-			const matchId = Number(fetchMatchResultPathMatch[1]);
-			if (!Number.isInteger(matchId) || matchId <= 0) {
-				return jsonError(400, "Invalid match id");
-			}
-
-			try {
-				const match = await env.DB.prepare(`
+	try {
+		const match = await c.env.DB.prepare(`
 					SELECT match_id, href, name, date, club, level, updated_at
 					FROM matches
 					WHERE match_id = ?
 				`).bind(matchId).first<MatchListItem>();
-				if(match) {
-					await fetchMatchResult(matchId, match.href, env.BROWSER, env.DB);
-					return withCors(Response.json({ message: "Match result fetched successfully" }));
-				} else {
-					return jsonError(404, "Match not found");
-				}
-			} catch(error) {
-				console.error(error)
-				return jsonError(500, "Failed to fetch match result");
-			}
+		if (match) {
+			await fetchMatchResult(matchId, match.href, c.env.BROWSER, c.env.DB);
+			return c.json({ message: "Match result fetched successfully" });
 		}
-		return jsonError(404, "Route not found");
+		return c.json({ error: "Match not found" }, 404);
+	} catch (error) {
+		console.error(error);
+		return c.json({ error: "Failed to fetch match result" }, 500);
+	}
+});
+
+app.notFound((c) => c.json({ error: "Route not found" }, 404));
+
+export default {
+	fetch(req: Request, env: Env, ctx: ExecutionContext): Response | Promise<Response> {
+		return app.fetch(req, env, ctx);
 	},
 
 	// The scheduled handler is invoked at the interval set in our wrangler.jsonc's
