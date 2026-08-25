@@ -1,3 +1,3 @@
-export function AdBanner() {
-  return null;
+export function AdBanner({ adUnitId }: { adUnitId: string }) {
+	return null;
 }

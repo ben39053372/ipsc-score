@@ -1,25 +1,29 @@
-import { AdBanner } from "../components/AdBanner";
+import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
 	ActivityIndicator,
 	FlatList,
+	Platform,
 	Pressable,
 	StyleSheet,
 	Text,
 	View,
 } from "react-native";
-import { TestIds, useAppOpenAd } from "react-native-google-mobile-ads";
-import { useRouter } from "expo-router";
-import { AdsIDs, showLeaderboardInterstitial } from "../lib/ads";
+import { useAppOpenAd } from "react-native-google-mobile-ads";
+import { AdsIDs } from "@/lib/adids";
+import { disableAds } from "@/lib/ads.native";
+import { AdBanner } from "../components/AdBanner";
 import {
-	type MatchListItem,
 	fetchMatches,
 	getDefaultBaseUrl,
+	type MatchListItem,
 } from "../lib/ipscApi";
 
 export default function Index() {
 	const router = useRouter();
-	const { isLoaded, load, show } = useAppOpenAd(AdsIDs.APP_OPEN);
+	const { isLoaded, load, show } = useAppOpenAd(
+		Platform.OS === "ios" ? AdsIDs.APP_OPEN.ios : AdsIDs.APP_OPEN.android,
+	);
 	const baseUrl = getDefaultBaseUrl();
 
 	const [matches, setMatches] = useState<MatchListItem[]>([]);
@@ -45,7 +49,9 @@ export default function Index() {
 
 	useEffect(() => {
 		// Start loading the interstitial straight away
-		load();
+		if (!disableAds) {
+			load();
+		}
 	}, [load]);
 
 	useEffect(() => {
@@ -60,15 +66,13 @@ export default function Index() {
 
 	const openLeaderboard = useCallback(
 		(match: MatchListItem) => {
-			showLeaderboardInterstitial(() => {
-				router.push({
-					pathname: "/leaderboard",
-					params: {
-						matchId: String(match.matchId),
-						baseUrl,
-						matchName: match.name,
-					},
-				});
+			router.push({
+				pathname: "/leaderboard",
+				params: {
+					matchId: String(match.matchId),
+					baseUrl,
+					matchName: match.name,
+				},
 			});
 		},
 		[router, baseUrl],
@@ -108,7 +112,13 @@ export default function Index() {
 					}}
 				/>
 			</View>
-			<AdBanner />
+			<AdBanner
+				adUnitId={
+					Platform.OS === "ios"
+						? AdsIDs.MATCHES_BANNER.ios
+						: AdsIDs.MATCHES_BANNER.android
+				}
+			/>
 		</View>
 	);
 }
@@ -120,6 +130,7 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 16,
 		paddingTop: 16,
 		paddingBottom: 8,
+		alignItems: "center",
 		gap: 12,
 	},
 	matchesCard: {
