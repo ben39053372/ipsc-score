@@ -72,6 +72,7 @@ export default function Index() {
 					matchId: String(match.matchId),
 					baseUrl,
 					matchName: match.name,
+					href: match.href,
 				},
 			});
 		},

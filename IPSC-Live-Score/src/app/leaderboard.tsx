@@ -28,11 +28,13 @@ export default function LeaderboardScreen() {
 		matchId?: string;
 		baseUrl?: string;
 		matchName?: string;
+		href?: string;
 	}>();
 
 	const matchId = Number(params.matchId);
 	const baseUrl = normalizeBaseUrl(params.baseUrl ?? getDefaultBaseUrl());
 	const matchName = params.matchName ?? "Selected match";
+	const href = params.href ?? "";
 
 	const [scoreGroups, setScoreGroups] = useState<ScoreGroup[]>([]);
 	const [scoreLoading, setScoreLoading] = useState(false);
@@ -53,7 +55,7 @@ export default function LeaderboardScreen() {
 		setScoreError(null);
 
 		try {
-			const data = await fetchScore(baseUrl, matchId);
+			const data = await fetchScore(baseUrl, matchId, href);
 			setScoreGroups(data);
 		} catch (error) {
 			const message =
@@ -63,7 +65,7 @@ export default function LeaderboardScreen() {
 		} finally {
 			setScoreLoading(false);
 		}
-	}, [baseUrl, matchId]);
+	}, [baseUrl, matchId, href]);
 
 	useEffect(() => {
 		void loadScore();

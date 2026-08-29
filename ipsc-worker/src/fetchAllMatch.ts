@@ -1,9 +1,10 @@
+import puppeteer from '@cloudflare/puppeteer';
 import * as cheerio from 'cheerio';
 import Cloudflare from 'cloudflare';
-import puppeteer from '@cloudflare/puppeteer';
 
 const matchUrls = [
     'https://hkg.as.ipscess.org/portal',
+    "https://hkg02.as.ipscess.org/portal"
 ];
 
 const parseMatchDate = (value: string): Date | null => {
@@ -49,25 +50,28 @@ export const fetchAllMatch = async (BROWSER: BrowserRun, DB: D1Database): Promis
 
     await DB.prepare(`
         CREATE TABLE IF NOT EXISTS matches (
-            match_id INTEGER PRIMARY KEY,
+            match_id INTEGER NOT NULL,
             href TEXT NOT NULL,
             name TEXT NOT NULL,
             date TEXT NOT NULL,
             club TEXT NOT NULL,
             level TEXT NOT NULL,
-            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            match_date TEXT NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (match_id, href)
         )
     `).run();
 
     await DB.batch(matches.map((match) => DB.prepare(`
-        INSERT INTO matches (match_id, href, name, date, club, level)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT (match_id) DO UPDATE SET
+        INSERT INTO matches (match_id, href, name, date, club, level, match_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (match_id, href) DO UPDATE SET
             href = excluded.href,
             name = excluded.name,
             date = excluded.date,
             club = excluded.club,
             level = excluded.level,
+            match_date = excluded.match_date,
             updated_at = CURRENT_TIMESTAMP
         `).bind(
         match.matchId,
@@ -76,6 +80,7 @@ export const fetchAllMatch = async (BROWSER: BrowserRun, DB: D1Database): Promis
         match.date,
         match.club,
         match.level,
+        parseMatchDate(match.date)?.toISOString() ?? null
     )));
 
     const haveLiveMatch = matches.some((match) => {

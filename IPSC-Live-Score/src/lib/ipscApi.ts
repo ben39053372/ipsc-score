@@ -60,8 +60,11 @@ export const fetchMatches = async (baseUrl: string): Promise<MatchListItem[]> =>
     return (await response.json()) as MatchListItem[];
 };
 
-export const fetchScore = async (baseUrl: string, matchId: number): Promise<ScoreGroup[]> => {
-    const response = await fetch(`${baseUrl}/matches/${matchId}/score`);
+export const fetchScore = async (baseUrl: string, matchId: number, href: string): Promise<ScoreGroup[]> => {
+    const url = new URL(`${baseUrl}/matches/${matchId}/score`);
+    const params = new URLSearchParams([["href", href]]);
+    url.search = params.toString();
+    const response = await fetch(url);
     if (!response.ok) {
         throw new Error(await getApiError(response, `Failed to load score (${response.status})`));
     }

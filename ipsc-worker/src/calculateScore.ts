@@ -1,14 +1,14 @@
-const getResult = async (DB: D1Database, matchId: number) => {
-    const resultTableName = `match-result-${matchId}`;
+const getResult = async (DB: D1Database, matchId: number, href: string) => {
+    const resultTableName = `match-result-${href}-${matchId}`;
     const resultRow = await DB.prepare(`
         SELECT * FROM "${resultTableName}"
     `).all<ResultRow>();
     return resultRow || null;
 };
 
-const getShooterList = async (DB: D1Database, matchId: number) => {
-    const tableName = `match-${matchId}`;
-    const resultTableName = `match-result-${matchId}`;
+const getShooterList = async (DB: D1Database, matchId: number, href: string) => {
+    const tableName = `match-${href}-${matchId}`;
+    const resultTableName = `match-result-${href}-${matchId}`;
     const shooterList = await DB.prepare(`
         SELECT
             m.name,
@@ -81,13 +81,11 @@ const groupByGroup = {
 
 type GroupName = keyof typeof groupByGroup;
 
-export const calScore = async (DB: D1Database, matchId: number, group?: GroupName) => {
-    let stageCount = 0;
-    const matchResult = await getResult(DB, matchId);
+export const calScore = async (DB: D1Database, matchId: number, href: string, group?: GroupName) => {
+    const matchResult = await getResult(DB, matchId, href);
     if (!matchResult.success) return null;
 
-    stageCount = Math.max(...matchResult.results.map(r => r.stage));
-    const shooterList = await getShooterList(DB, matchId);
+    const shooterList = await getShooterList(DB, matchId, href);
 
     const shooterByGroup = Object.entries(groupByGroup).filter(([groupName, _]) => !group || groupName === group).map(([groupName, filterFn]) => {
         const groupPlayers = shooterList.results.filter((row) => filterFn(row));
@@ -110,7 +108,7 @@ export const calScore = async (DB: D1Database, matchId: number, group?: GroupNam
                     return { ...r, stagePoint: ((factor ? factor : 0) / (stageMax ? stageMax.maxFactor : 0) * (stageMax ? stageMax.maxPoint : 0)) };
                 });
                 const totalStagePoint = stageResult.map(r => r.stagePoint).reduce((acc, curr) => acc + curr, 0);
-                const dq = stageResult.every(r => r.factor === "0.0000" && r.pts != "0")
+                const dq = stageResult.every(r => r.factor === "0.0000" && r.pts !== "0")
                 return { ...player, totalStagePoint, stageResult, dq };
             }).sort((a, b) => {
                 if (a.dq !== b.dq) return a.dq ? 1 : -1;

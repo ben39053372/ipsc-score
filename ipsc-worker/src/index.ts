@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { calScore } from "./calculateScore";
 import { fetchAllMatch } from "./fetchAllMatch";
 import { fetchLatestMatchResult, fetchMatchResult } from "./fetchLatestMatchResult";
-import { calScore } from "./calculateScore";
 
 type MatchListItem = {
 	matchId: number;
@@ -11,6 +11,7 @@ type MatchListItem = {
 	date: string;
 	club: string;
 	level: string;
+	match_date: string;
 	updated_at: string;
 };
 
@@ -63,9 +64,10 @@ app.get("/matches", async (c) => {
 					date,
 					club,
 					level,
-					updated_at
+					updated_at,
+					match_date
 				FROM matches
-				ORDER BY updated_at DESC, match_id DESC
+				ORDER BY match_date DESC, match_id DESC
 			`).all<MatchListItem>();
 
 	if (!result.success) {
@@ -77,12 +79,13 @@ app.get("/matches", async (c) => {
 
 app.get("/matches/:matchId/score", async (c) => {
 	const matchId = Number(c.req.param("matchId"));
+	const href = c.req.query("href") ?? "";
 	if (!Number.isInteger(matchId) || matchId <= 0) {
 		return c.json({ error: "Invalid match id" }, 400);
 	}
 
 	try {
-		const score = await calScore(c.env.DB, matchId);
+		const score = await calScore(c.env.DB, matchId, href);
 		if (score === null) {
 			return c.json({ error: "Match score not found" }, 404);
 		}

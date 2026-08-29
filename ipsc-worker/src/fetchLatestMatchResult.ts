@@ -1,12 +1,12 @@
-import * as cheerio from 'cheerio';
 import puppeteer from '@cloudflare/puppeteer';
+import * as cheerio from 'cheerio';
 
 export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun): Promise<boolean> => {
 
     const latestMatch = await DB.prepare(`
         SELECT match_id, href, name, date, club, level, updated_at
         FROM matches
-        ORDER BY match_id DESC
+        ORDER BY match_date DESC
         LIMIT 1
     `).first();
     console.log("Fetched latest match from D1:", latestMatch);
@@ -27,8 +27,8 @@ export const fetchMatchResult = async (matchId: number, matchUrl: string, BROWSE
         throw new Error(`Invalid match ID: ${matchId}`);
     }
 
-    const matchTableName = `match-${matchId}`;
-    const resultTableName = `match-result-${matchId}`;
+    const matchTableName = `match-${matchUrl}-${matchId}`;
+    const resultTableName = `match-result-${matchUrl}-${matchId}`;
 
     await DB.batch([
         DB.prepare(`
@@ -70,9 +70,9 @@ export const fetchMatchResult = async (matchId: number, matchUrl: string, BROWSE
     const page = await browser.newPage();
     await page.setRequestInterception(true);
     page.on("request", (req) => {
-        if (req.resourceType() == "stylesheet" ||
-            req.resourceType() == "font" ||
-            req.resourceType() == "image" ||
+        if (req.resourceType() === "stylesheet" ||
+            req.resourceType() === "font" ||
+            req.resourceType() === "image" ||
             req.url().endsWith(".js") ||
             req.url().endsWith(".ico")) {
             req.abort();
