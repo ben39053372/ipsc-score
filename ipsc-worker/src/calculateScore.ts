@@ -77,6 +77,12 @@ const groupByGroup = {
         s.div === "Classic" && s.cat === "S. Junior",
     "Classic Super Senior": (s: MatchRow) =>
         s.div === "Classic" && s.cat === "S. Senior",
+    "APC Iron": (s: MatchRow) => s.div === "APC Iron",
+    "APC Optics": (s: MatchRow) => s.div === "APC Optics",
+    "Air Semi Auto Open": (s: MatchRow) => s.div === "Air Semi Auto Open",
+    "Air Semi Auto Standard": (s: MatchRow) => s.div === "Air Semi Auto Standard",
+    "APC Kit": (s: MatchRow) => s.div === "APC Kit",
+    "Air Electric": (s: MatchRow) => s.div === "Air Electric"
 }
 
 type GroupName = keyof typeof groupByGroup;

@@ -91,7 +91,7 @@ export default function Index() {
 				) : null}
 				<FlatList
 					data={matches}
-					keyExtractor={(item) => item.matchId.toString()}
+					keyExtractor={(item) => item.matchId.toString() + item.href}
 					contentContainerStyle={styles.matchListContent}
 					renderItem={({ item }) => {
 						return (

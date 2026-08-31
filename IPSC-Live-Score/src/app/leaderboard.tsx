@@ -4,6 +4,7 @@ import {
 	ActivityIndicator,
 	Platform,
 	Pressable,
+	ScrollView,
 	SectionList,
 	StyleSheet,
 	Text,
@@ -140,7 +141,7 @@ export default function LeaderboardScreen() {
 							</Text>
 						</Pressable>
 						{groupDropdownOpen ? (
-							<View style={styles.groupDropdownPanel}>
+							<ScrollView style={styles.groupDropdownPanel}>
 								{scoreGroups.map((group) => {
 									const selected = selectedGroupName === group.groupName;
 									return (
@@ -166,7 +167,7 @@ export default function LeaderboardScreen() {
 										</Pressable>
 									);
 								})}
-							</View>
+							</ScrollView>
 						) : null}
 					</View>
 				) : null}
@@ -187,6 +188,7 @@ export default function LeaderboardScreen() {
 									pathname: "/player-detail",
 									params: {
 										matchId: String(matchId),
+										href: href,
 										baseUrl,
 										matchName,
 										groupName: selectedGroupName ?? "",
@@ -322,7 +324,7 @@ const styles = StyleSheet.create({
 		borderColor: "#c7d5eb",
 		borderRadius: 8,
 		backgroundColor: "#ffffff",
-		overflow: "hidden",
+		maxHeight: "80%",
 	},
 	groupOption: {
 		paddingHorizontal: 10,

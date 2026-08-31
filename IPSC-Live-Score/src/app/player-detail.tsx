@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
 	FlatList,
@@ -11,16 +11,16 @@ import {
 	TextInput,
 	View,
 } from "react-native";
+import { AdBanner } from "@/components/AdBanner";
+import { AdsIDs } from "@/lib/adids";
 import {
-	type ScoreGroup,
-	type ShooterScore,
-	type StageResult,
 	fetchScore,
 	getDefaultBaseUrl,
 	normalizeBaseUrl,
+	type ScoreGroup,
+	type ShooterScore,
+	type StageResult,
 } from "../lib/ipscApi";
-import { AdBanner } from "@/components/AdBanner";
-import { AdsIDs } from "@/lib/adids";
 
 const formatScore = (value: number) => value.toFixed(4);
 
@@ -29,6 +29,7 @@ const formatPercent = (value: number) => `${value.toFixed(2)}%`;
 export default function PlayerDetailScreen() {
 	const params = useLocalSearchParams<{
 		matchId?: string;
+		href?: string;
 		baseUrl?: string;
 		matchName?: string;
 		groupName?: string;
@@ -44,6 +45,7 @@ export default function PlayerDetailScreen() {
 	const playerName = params.playerName ?? "";
 	const playerShooterId = Number(params.playerShooterId);
 	const playerRank = Number(params.playerRank);
+	const href = params.href ?? "";
 
 	const [scoreGroups, setScoreGroups] = useState<ScoreGroup[]>([]);
 	const [selectedGroupName, setSelectedGroupName] = useState<string | null>(
@@ -99,7 +101,7 @@ export default function PlayerDetailScreen() {
 		setError(null);
 
 		try {
-			const groups = await fetchScore(baseUrl, matchId);
+			const groups = await fetchScore(baseUrl, matchId, href);
 			setScoreGroups(groups);
 		} catch (caughtError) {
 			const message =
@@ -111,7 +113,7 @@ export default function PlayerDetailScreen() {
 		} finally {
 			setLoading(false);
 		}
-	}, [baseUrl, matchId]);
+	}, [baseUrl, matchId, href]);
 
 	useEffect(() => {
 		void loadPlayerDetail();
