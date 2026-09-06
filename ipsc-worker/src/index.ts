@@ -121,6 +121,7 @@ app.get("/matches/latest/result", async (c) => {
 
 app.get("/matches/:matchId/result", async (c) => {
 	const matchId = Number(c.req.param("matchId"));
+	const href = c.req.query("href") ?? "";
 	if (!Number.isInteger(matchId) || matchId <= 0) {
 		return c.json({ error: "Invalid match id" }, 400);
 	}
@@ -129,8 +130,8 @@ app.get("/matches/:matchId/result", async (c) => {
 		const match = await c.env.DB.prepare(`
 					SELECT match_id, href, name, date, club, level, updated_at
 					FROM matches
-					WHERE match_id = ?
-				`).bind(matchId).first<MatchListItem>();
+					WHERE match_id = ? AND href = ?
+				`).bind(matchId, href).first<MatchListItem>();
 		if (match) {
 			await fetchMatchResult(matchId, match.href, c.env.BROWSER, c.env.DB);
 			return c.json({ message: "Match result fetched successfully" });

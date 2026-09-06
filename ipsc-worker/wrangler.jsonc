@@ -29,6 +29,9 @@
 			"database_id": "260324aa-550a-468b-8dc6-346474632846"
 		}
 	],
+	"limits": {
+		"cpu_ms": 300000
+	},
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
