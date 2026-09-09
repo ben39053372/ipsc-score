@@ -100,12 +100,14 @@ export const fetchMatchResult = async (matchId: number, matchUrl: string, BROWSE
             const html = await page.content();
             if (html.includes("Shooter not found.")) {
                 retryCount++;
-                if (retryCount >= 3) {
+                if (retryCount >= 5) {
                     console.log(`Shooter ${shooterId} not found, stopping after 5 consecutive not found.`);
                     break;
                 }
                 console.log(`Shooter ${shooterId} not found, retry count: ${retryCount}`);
                 continue;
+            } else {
+                retryCount = 0;
             }
 
             const $ = cheerio.load(html);
