@@ -5,6 +5,7 @@ import {
 	FlatList,
 	Platform,
 	Pressable,
+	RefreshControl,
 	StyleSheet,
 	Text,
 	View,
@@ -28,6 +29,7 @@ export default function Index() {
 
 	const [matches, setMatches] = useState<MatchListItem[]>([]);
 	const [matchesLoading, setMatchesLoading] = useState(false);
+	const [refreshing, setRefreshing] = useState(false);
 	const [matchesError, setMatchesError] = useState<string | null>(null);
 
 	const loadMatches = useCallback(async (targetBaseUrl: string) => {
@@ -46,6 +48,15 @@ export default function Index() {
 			setMatchesLoading(false);
 		}
 	}, []);
+
+	const refreshMatches = useCallback(async () => {
+		setRefreshing(true);
+		try {
+			await loadMatches(baseUrl);
+		} finally {
+			setRefreshing(false);
+		}
+	}, [baseUrl, loadMatches]);
 
 	useEffect(() => {
 		// Start loading the interstitial straight away
@@ -85,7 +96,9 @@ export default function Index() {
 				<Text style={styles.title}>IPSC Live Score</Text>
 				<Text style={styles.sectionTitle}>Matches</Text>
 				{matchesLoading ? <ActivityIndicator /> : null}
-				{matchesError ? <Text style={styles.errorText}>No Data</Text> : null}
+				{matchesError ? (
+					<Text style={styles.errorText}>No Data: {matchesError}</Text>
+				) : null}
 				{!matchesLoading && !matches.length && !matchesError ? (
 					<Text style={styles.helpText}>No matches found yet.</Text>
 				) : null}
@@ -93,6 +106,12 @@ export default function Index() {
 					data={matches}
 					keyExtractor={(item) => item.matchId.toString() + item.href}
 					contentContainerStyle={styles.matchListContent}
+					refreshControl={
+						<RefreshControl
+							refreshing={refreshing}
+							onRefresh={() => void refreshMatches()}
+						/>
+					}
 					renderItem={({ item }) => {
 						return (
 							<Pressable
