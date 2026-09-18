@@ -42,7 +42,7 @@ export type ScoreGroup = {
 };
 
 export const getDefaultBaseUrl = () => {
-    return "https://ipsc-worker.brcs68m5yk.workers.dev";
+    return "https://ipsc-score.batisio.com";
 };
 
 export const normalizeBaseUrl = (value: string) => value.trim().replace(/\/+$/, "");
