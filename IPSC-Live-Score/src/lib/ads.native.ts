@@ -3,7 +3,7 @@ import mobileAds, {
 } from "react-native-google-mobile-ads";
 
 
-export const disableAds = true;
+export const disableAds = false;
 
 let initialization: Promise<void> | null = null;
 

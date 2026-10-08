@@ -2,13 +2,13 @@
 	"expo": {
 		"name": "IPSC-Live-Score",
 		"slug": "IPSC-Live-Score",
-		"version": "1.0.0",
+		"version": "1.1.0",
 		"orientation": "portrait",
-		"icon": "./assets/images/icon.png",
+		"icon": "./assets/ipsc_logo.png",
 		"scheme": "ipsclivescore",
 		"userInterfaceStyle": "automatic",
 		"ios": {
-			"icon": "./assets/ipsc_logo.jpg",
+			"icon": "./assets/ipsc_logo.png",
 			"bundleIdentifier": "com.ben39053372.IPSCLiveScore",
 			"infoPlist": {
 				"ITSAppUsesNonExemptEncryption": false
@@ -16,19 +16,14 @@
 			"googleServicesFile": "./GoogleService-Info.plist"
 		},
 		"android": {
+			"icon": "./assets/ipsc_logo.png",
 			"googleServicesFile": "./google-services.json",
-			"adaptiveIcon": {
-				"backgroundColor": "#E6F4FE",
-				"foregroundImage": "./assets/images/android-icon-foreground.png",
-				"backgroundImage": "./assets/images/android-icon-background.png",
-				"monochromeImage": "./assets/images/android-icon-monochrome.png"
-			},
 			"predictiveBackGestureEnabled": false,
 			"package": "com.ben39053372.IPSCLiveScore"
 		},
 		"web": {
 			"output": "static",
-			"favicon": "./assets/images/favicon.png"
+			"favicon": "./assets/ipsc_logo.png"
 		},
 		"plugins": [
 			"expo-router",
@@ -36,7 +31,7 @@
 				"expo-splash-screen",
 				{
 					"backgroundColor": "#000",
-					"image": "./assets/ipsc_logo.jpg",
+					"image": "./assets/ipsc_logo.png",
 					"imageWidth": 200
 				}
 			],

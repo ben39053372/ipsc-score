@@ -10,9 +10,9 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { useAppOpenAd } from "react-native-google-mobile-ads";
+// import { useAppOpenAd } from "react-native-google-mobile-ads";
 import { AdsIDs } from "@/lib/adids";
-import { disableAds } from "@/lib/ads.native";
+// import { disableAds } from "@/lib/ads.native";
 import { AdBanner } from "../components/AdBanner";
 import {
 	fetchMatches,
@@ -22,9 +22,9 @@ import {
 
 export default function Index() {
 	const router = useRouter();
-	const { isLoaded, load, show } = useAppOpenAd(
-		Platform.OS === "ios" ? AdsIDs.APP_OPEN.ios : AdsIDs.APP_OPEN.android,
-	);
+	// const { isLoaded, load, show } = useAppOpenAd(
+	// 	Platform.OS === "ios" ? AdsIDs.APP_OPEN.ios : AdsIDs.APP_OPEN.android,
+	// );
 	const baseUrl = getDefaultBaseUrl();
 
 	const [matches, setMatches] = useState<MatchListItem[]>([]);
@@ -58,18 +58,18 @@ export default function Index() {
 		}
 	}, [baseUrl, loadMatches]);
 
-	useEffect(() => {
-		// Start loading the interstitial straight away
-		if (!disableAds) {
-			load();
-		}
-	}, [load]);
+	// useEffect(() => {
+	// 	// Start loading the interstitial straight away
+	// 	if (!disableAds) {
+	// 		load();
+	// 	}
+	// }, [load]);
 
-	useEffect(() => {
-		if (isLoaded) {
-			show();
-		}
-	}, [isLoaded, show]);
+	// useEffect(() => {
+	// 	if (isLoaded) {
+	// 		show();
+	// 	}
+	// }, [isLoaded, show]);
 
 	useEffect(() => {
 		void loadMatches(baseUrl);
