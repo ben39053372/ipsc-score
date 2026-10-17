@@ -1,5 +1,5 @@
 export type MatchListItem = {
-    matchId: number;
+    matchId: number | string;
     href: string;
     name: string;
     date: string;

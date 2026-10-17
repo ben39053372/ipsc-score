@@ -8,11 +8,17 @@
 	"main": "src/index.ts",
 	"compatibility_date": "2026-08-17",
 	"observability": {
-		"enabled": true
+		"logs": {
+			"enabled": true,
+			"invocation_logs": true
+		},
+		"traces": {
+			"enabled": false
+		}
 	},
 	"triggers": {
 		"crons": [
-			"0 8 * * *" // Run at 8:00 AM every day fetch all matches
+			"0 0 * * *" // Run at 8:00 AM every day fetch all matches
 		]
 	},
 	"upload_source_maps": true,

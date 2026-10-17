@@ -5,7 +5,7 @@ import { fetchAllMatch } from "./fetchAllMatch";
 import { fetchLatestMatchResult, fetchMatchResult } from "./fetchLatestMatchResult";
 
 type MatchListItem = {
-	matchId: number;
+	matchId: number | string;
 	href: string;
 	name: string;
 	date: string;
@@ -155,7 +155,7 @@ export default {
 	async scheduled(event, env, ctx): Promise<void> {
 		// Write code for updating your API
 		switch (event.cron) {
-			case "0 8 * * *":
+			case "0 0 * * *":
 				// Every day at 8:00 AM
 				await fetchAllMatch(env.BROWSER, env.DB);
 				break;

@@ -6,6 +6,7 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
     const latestMatch = await DB.prepare(`
         SELECT match_id, href, name, date, club, level, updated_at
         FROM matches
+        WHERE typeof(match_id) = 'integer'
         ORDER BY match_date DESC
         LIMIT 1
     `).first();
