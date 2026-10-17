@@ -9,6 +9,8 @@ type PortalShooter = {
     category: string;
 };
 
+const MAX_SHOOTERS_PER_RUN = 5;
+
 export const fetchPortalMatchResult = async (
     matchId: string,
     matchUrl: string,
@@ -52,13 +54,23 @@ export const fetchPortalMatchResult = async (
 
     const now = Math.floor(Date.now() / 1000);
     const recentShooters = await DB.prepare(`
-        SELECT DISTINCT shooter_id
+        SELECT shooter_id, MAX(last_updated_at) AS last_updated_at
         FROM "${resultTableName}"
-        WHERE shooter_id IS NOT NULL AND last_updated_at >= ?
-    `).bind(now - 15 * 60).all<{ shooter_id: number }>();
-    const recentShooterIds = new Set(recentShooters.results.map((row) => row.shooter_id));
+        WHERE shooter_id IS NOT NULL
+        GROUP BY shooter_id
+    `).all<{ shooter_id: number; last_updated_at: number | null }>();
+    const lastUpdatedAtByShooter = new Map(
+        recentShooters.results.map((row) => [row.shooter_id, row.last_updated_at]),
+    );
+    const recentShooterIds = new Set(
+        recentShooters.results
+            .filter((row) => row.last_updated_at !== null && row.last_updated_at >= now - 15 * 60)
+            .map((row) => row.shooter_id),
+    );
     const browser = await puppeteer.launch(BROWSER);
     const page = await browser.newPage();
+    page.setDefaultTimeout(15000);
+    page.setDefaultNavigationTimeout(25000);
     await page.setRequestInterception(true);
     page.on('request', (request) => {
         if (['stylesheet', 'font', 'image'].includes(request.resourceType())) {
@@ -68,6 +80,7 @@ export const fetchPortalMatchResult = async (
         }
     });
 
+    let phase = 'open match page';
     try {
         await page.goto(matchUrl, { waitUntil: 'domcontentloaded' });
         const matchHtml = await page.content();
@@ -81,9 +94,12 @@ export const fetchPortalMatchResult = async (
         const shooters = new Map<number, PortalShooter>();
 
         for (const divisionPath of divisionPaths) {
+            phase = `open division results ${divisionPath}`;
             await page.goto(matchUrl, { waitUntil: 'domcontentloaded' });
             const navigation = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => null);
-            await page.click(`main a[onclick*="${divisionPath}"]`);
+            await page.$eval(`main a[onclick*="${divisionPath}"]`, (element) => {
+                (element as { click: () => void }).click();
+            });
             await navigation;
             if (!page.url().includes('/result/')) {
                 throw new Error(`Failed to open portal division results: ${divisionPath}`);
@@ -108,15 +124,32 @@ export const fetchPortalMatchResult = async (
             });
         }
 
-        for (const shooter of shooters.values()) {
-            if (recentShooterIds.has(shooter.shooterId)) {
-                continue;
-            }
+        phase = 'open verify form';
+        await page.goto(matchUrl, { waitUntil: 'domcontentloaded' });
+        const shootersToFetch = [...shooters.values()]
+            .filter((shooter) => !recentShooterIds.has(shooter.shooterId))
+            .sort((a, b) => {
+                const aUpdatedAt = lastUpdatedAtByShooter.get(a.shooterId);
+                const bUpdatedAt = lastUpdatedAtByShooter.get(b.shooterId);
+                if (aUpdatedAt === undefined || aUpdatedAt === null) return -1;
+                if (bUpdatedAt === undefined || bUpdatedAt === null) return 1;
+                return aUpdatedAt - bUpdatedAt;
+            })
+            .slice(0, MAX_SHOOTERS_PER_RUN);
+        let processedShooters = 0;
 
-            await page.goto(matchUrl, { waitUntil: 'domcontentloaded' });
+        for (const shooter of shootersToFetch) {
+
+            phase = `prepare verification for shooter ${shooter.shooterId}`;
+            await page.$eval('#shooter', (element) => {
+                (element as unknown as { value: string }).value = '';
+            });
             await page.type('#shooter', String(shooter.shooterId));
             const navigation = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => null);
-            await page.click('#verify-form button[type="button"]');
+            phase = `submit reCAPTCHA verification for shooter ${shooter.shooterId}`;
+            await page.$eval('#verify-form button[type="button"]', (element) => {
+                (element as { click: () => void }).click();
+            });
             await navigation;
             if (!page.url().endsWith('/verify')) {
                 throw new Error(`Failed to verify portal shooter ${shooter.shooterId}`);
@@ -125,8 +158,9 @@ export const fetchPortalMatchResult = async (
             const $ = cheerio.load(await page.content());
             const rawName = $('main h3.display-5').first().text().trim();
             const name = rawName.replace(/^#\d+\s*/, '').trim();
-            if (!name || rawName === 'Verify') {
-                throw new Error(`Portal verification returned no score for shooter ${shooter.shooterId}`);
+            const returnedShooterId = Number(/^#(\d+)/.exec(rawName)?.[1]);
+            if (!name || returnedShooterId !== shooter.shooterId) {
+                throw new Error(`Portal verification did not return shooter ${shooter.shooterId} (received: ${rawName || 'no result'})`);
             }
 
             const info = $('main h3.display-5').first().parent().text().replace(/\s+/g, ' ').trim();
@@ -149,6 +183,7 @@ export const fetchPortalMatchResult = async (
                 };
             }).filter((row): row is ResultRow => Number.isInteger(row.stage));
 
+            phase = `save scores for shooter ${shooter.shooterId}`;
             await DB.batch([
                 DB.prepare(`
                     INSERT INTO "${matchTableName}" (name, div, class_name, cat)
@@ -192,7 +227,18 @@ export const fetchPortalMatchResult = async (
                     now,
                 )),
             ]);
+            processedShooters++;
         }
+        console.log('Portal match scraper batch completed', {
+            matchId,
+            totalShooters: shooters.size,
+            processedShooters,
+            deferredShooters: shooters.size - processedShooters,
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('Portal match scraper failed', { matchId, phase, message });
+        throw new Error(`Portal match scraper failed during ${phase}: ${message}`);
     } finally {
         await browser.close();
     }

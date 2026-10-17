@@ -19,10 +19,21 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
 
     const matchId = String(latestMatch.match_id);
     const matchUrl = String(latestMatch.href);
-    if (matchUrl.startsWith('https://portal.ipscess.org/portal/match/')) {
-        await fetchPortalMatchResult(matchId, matchUrl, BROWSER, DB);
-    } else {
-        await fetchMatchResult(Number(matchId), matchUrl, BROWSER, DB);
+    try {
+        if (matchUrl.startsWith('https://portal.ipscess.org/portal/match/')) {
+            await fetchPortalMatchResult(matchId, matchUrl, BROWSER, DB);
+        } else {
+            await fetchMatchResult(Number(matchId), matchUrl, BROWSER, DB);
+        }
+    } catch (error) {
+        console.error('Failed to scrape latest match result', {
+            matchId,
+            matchUrl,
+            error: error instanceof Error
+                ? { name: error.name, message: error.message, stack: error.stack }
+                : String(error),
+        });
+        throw error;
     }
 
     return true;
