@@ -103,15 +103,29 @@ export const calScore = async (DB: D1Database, matchId: number | string, href: s
         const groupResult = matchResult.results.filter(r => groupPlayers.some(p => p.name === r.name))
         const groupStageMaxMeta = Object.entries(Object.groupBy(groupResult, (r) => r.stage)).map(([stage, stageResults]) => {
             if (!stageResults || stageResults.length === 0) return { stage, maxFactor: 0, maxPoint: 0 };
-            const factor = [...stageResults.map(r => parseInt(r.pts) / parseFloat(r.time))]
-            return { stage, maxFactor: Math.max(...factor.filter(v => Number.isFinite(v))), maxPoint: (parseInt(stageResults[0].a) + parseInt(stageResults[0].c) + parseInt(stageResults[0].d) + parseInt(stageResults[0].mi) + parseInt(stageResults[0].ns) + parseInt(stageResults[0].pe)) * 5 };
+            const factors = stageResults.map((result) => {
+                const points = Number(result.pts);
+                const time = Number(result.time);
+                return time > 0 ? points / time : 0;
+            });
+            const maxFactor = Math.max(0, ...factors.filter(Number.isFinite));
+            const maxPoint = Math.max(...stageResults.map((result) =>
+                [result.a, result.c, result.d, result.mi, result.ns, result.pe]
+                    .reduce((sum, hits) => sum + (Number(hits) || 0), 0) * 5,
+            ));
+            return { stage, maxFactor, maxPoint };
         })
         return {
             groupName, groupResults: groupPlayers.map((player) => {
                 const stageResult = matchResult.results.filter((r) => r.name === player.name).map(r => {
                     const stageMax = groupStageMaxMeta.find(f => parseInt(f.stage) === r.stage)
-                    const factor = parseInt(r.pts) / parseFloat(r.time);
-                    return { ...r, stagePoint: ((factor ? factor : 0) / (stageMax ? stageMax.maxFactor : 0) * (stageMax ? stageMax.maxPoint : 0)) };
+                    const points = Number(r.pts);
+                    const time = Number(r.time);
+                    const factor = time > 0 ? points / time : 0;
+                    const stagePoint = stageMax && stageMax.maxFactor > 0 && Number.isFinite(factor)
+                        ? factor / stageMax.maxFactor * stageMax.maxPoint
+                        : 0;
+                    return { ...r, stagePoint };
                 });
                 const totalStagePoint = stageResult.map(r => r.stagePoint).reduce((acc, curr) => acc + curr, 0);
                 const dq = stageResult.every(r => r.factor === "0.0000" && r.pts !== "0")
