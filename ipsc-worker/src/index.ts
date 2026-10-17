@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { calScore } from "./calculateScore";
 import { fetchAllMatch } from "./fetchAllMatch";
-import { enqueueLatestMatchResult, enqueueMatchResult, processMatchResultJob, type MatchResultJob } from "./matchResultQueue";
+import { enqueueLatestMatchResult, enqueueMatchResult, type MatchResultJob, processMatchResultJob } from "./matchResultQueue";
 
 type MatchListItem = {
 	matchId: number | string;
