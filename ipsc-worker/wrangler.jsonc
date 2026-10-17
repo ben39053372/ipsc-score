@@ -35,6 +35,24 @@
 			"database_id": "260324aa-550a-468b-8dc6-346474632846"
 		}
 	],
+	"queues": {
+		"producers": [
+			{
+				"queue": "ipsc-match-results",
+				"binding": "MATCH_RESULTS_QUEUE"
+			}
+		],
+		"consumers": [
+			{
+				"queue": "ipsc-match-results",
+				"max_batch_size": 1,
+				"max_batch_timeout": 5,
+				"max_retries": 5,
+				"dead_letter_queue": "ipsc-match-results-dlq",
+				"max_concurrency": 1
+			}
+		]
+	},
 	"limits": {
 		"cpu_ms": 300000
 	},

@@ -67,6 +67,7 @@ export const fetchPortalMatchResult = async (
             .filter((row) => row.last_updated_at !== null && row.last_updated_at >= now - 15 * 60)
             .map((row) => row.shooter_id),
     );
+    let hasMore = false;
     const browser = await puppeteer.launch(BROWSER);
     const page = await browser.newPage();
     page.setDefaultTimeout(15000);
@@ -126,7 +127,7 @@ export const fetchPortalMatchResult = async (
 
         phase = 'open verify form';
         await page.goto(matchUrl, { waitUntil: 'domcontentloaded' });
-        const shootersToFetch = [...shooters.values()]
+        const eligibleShooters = [...shooters.values()]
             .filter((shooter) => !recentShooterIds.has(shooter.shooterId))
             .sort((a, b) => {
                 const aUpdatedAt = lastUpdatedAtByShooter.get(a.shooterId);
@@ -134,8 +135,9 @@ export const fetchPortalMatchResult = async (
                 if (aUpdatedAt === undefined || aUpdatedAt === null) return -1;
                 if (bUpdatedAt === undefined || bUpdatedAt === null) return 1;
                 return aUpdatedAt - bUpdatedAt;
-            })
-            .slice(0, MAX_SHOOTERS_PER_RUN);
+            });
+        const shootersToFetch = eligibleShooters.slice(0, MAX_SHOOTERS_PER_RUN);
+        hasMore = eligibleShooters.length > shootersToFetch.length;
         let processedShooters = 0;
 
         for (const shooter of shootersToFetch) {
@@ -243,5 +245,5 @@ export const fetchPortalMatchResult = async (
         await browser.close();
     }
 
-    return true;
+    return hasMore;
 };

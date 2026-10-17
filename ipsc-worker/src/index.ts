@@ -2,8 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { calScore } from "./calculateScore";
 import { fetchAllMatch } from "./fetchAllMatch";
-import { fetchLatestMatchResult, fetchMatchResult } from "./fetchLatestMatchResult";
-import { fetchPortalMatchResult } from "./fetchPortalMatchResult";
+import { enqueueLatestMatchResult, enqueueMatchResult, processMatchResultJob, type MatchResultJob } from "./matchResultQueue";
 
 type MatchListItem = {
 	matchId: number | string;
@@ -35,6 +34,7 @@ type MatchListItem = {
 interface Env {
 	BROWSER: BrowserRun;
 	DB: D1Database;
+	MATCH_RESULTS_QUEUE: Queue<MatchResultJob>;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -109,9 +109,9 @@ app.get("/matches/fetch-all", async (c) => {
 
 app.get("/matches/latest/result", async (c) => {
 	try {
-		const success = await fetchLatestMatchResult(c.env.DB, c.env.BROWSER);
+		const success = await enqueueLatestMatchResult(c.env.DB, c.env.MATCH_RESULTS_QUEUE);
 		if (success) {
-			return c.json({ message: "Latest match result fetched successfully" });
+			return c.json({ message: "Latest match result fetch queued" }, 202);
 		}
 		return c.json({ error: "No matches found to fetch result" }, 404);
 	} catch (error) {
@@ -134,12 +134,8 @@ app.get("/matches/:matchId/result", async (c) => {
 			WHERE match_id = ? AND href = ?
 		`).bind(/^\d+$/.test(matchId) ? Number(matchId) : matchId, href).first<MatchListItem>();
 		if (match) {
-			if (match.href.startsWith("https://portal.ipscess.org/portal/match/")) {
-				await fetchPortalMatchResult(matchId, match.href, c.env.BROWSER, c.env.DB);
-			} else {
-				await fetchMatchResult(Number(matchId), match.href, c.env.BROWSER, c.env.DB);
-			}
-			return c.json({ message: "Match result fetched successfully" });
+			await enqueueMatchResult(matchId, match.href, c.env.MATCH_RESULTS_QUEUE);
+			return c.json({ message: "Match result fetch queued" }, 202);
 		}
 		return c.json({ error: "Match not found" }, 404);
 	} catch (error) {
@@ -166,9 +162,25 @@ export default {
 				break;
 			case "*/10 10-23 * * *":
 				// Every ten minutes
-				await fetchLatestMatchResult(env.DB, env.BROWSER);
+				await enqueueLatestMatchResult(env.DB, env.MATCH_RESULTS_QUEUE);
 				break;
 		}
 		console.log("cron processed");
 	},
-} satisfies ExportedHandler<Env>;
+
+	async queue(batch: MessageBatch<MatchResultJob>, env: Env): Promise<void> {
+		for (const message of batch.messages) {
+			try {
+				await processMatchResultJob(message.body, env.BROWSER, env.DB, env.MATCH_RESULTS_QUEUE);
+				message.ack();
+			} catch (error) {
+				console.error("Match result queue job failed", {
+					messageId: message.id,
+					attempts: message.attempts,
+					error: error instanceof Error ? error.message : String(error),
+				});
+				message.retry({ delaySeconds: Math.min(message.attempts * 30, 300) });
+			}
+		}
+	},
+} satisfies ExportedHandler<Env, MatchResultJob>;

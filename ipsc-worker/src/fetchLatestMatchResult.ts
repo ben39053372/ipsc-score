@@ -1,43 +1,5 @@
 import puppeteer from '@cloudflare/puppeteer';
 import * as cheerio from 'cheerio';
-import { fetchPortalMatchResult } from './fetchPortalMatchResult';
-
-export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun): Promise<boolean> => {
-
-    const latestMatch = await DB.prepare(`
-        SELECT match_id, href, name, date, club, level, updated_at
-        FROM matches
-        ORDER BY match_date DESC
-        LIMIT 1
-    `).first();
-    console.log("Fetched latest match from D1:", latestMatch);
-
-    if (!latestMatch) {
-        console.log("No matches found in D1");
-        return false;
-    }
-
-    const matchId = String(latestMatch.match_id);
-    const matchUrl = String(latestMatch.href);
-    try {
-        if (matchUrl.startsWith('https://portal.ipscess.org/portal/match/')) {
-            await fetchPortalMatchResult(matchId, matchUrl, BROWSER, DB);
-        } else {
-            await fetchMatchResult(Number(matchId), matchUrl, BROWSER, DB);
-        }
-    } catch (error) {
-        console.error('Failed to scrape latest match result', {
-            matchId,
-            matchUrl,
-            error: error instanceof Error
-                ? { name: error.name, message: error.message, stack: error.stack }
-                : String(error),
-        });
-        throw error;
-    }
-
-    return true;
-};
 
 export const fetchMatchResult = async (matchId: number, matchUrl: string, BROWSER: BrowserRun, DB: D1Database): Promise<any> => {
 
