@@ -1,12 +1,12 @@
 import puppeteer from '@cloudflare/puppeteer';
 import * as cheerio from 'cheerio';
+import { fetchPortalMatchResult } from './fetchPortalMatchResult';
 
 export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun): Promise<boolean> => {
 
     const latestMatch = await DB.prepare(`
         SELECT match_id, href, name, date, club, level, updated_at
         FROM matches
-        WHERE typeof(match_id) = 'integer'
         ORDER BY match_date DESC
         LIMIT 1
     `).first();
@@ -17,7 +17,13 @@ export const fetchLatestMatchResult = async (DB: D1Database, BROWSER: BrowserRun
         return false;
     }
 
-    await fetchMatchResult(latestMatch.match_id as number, latestMatch.href as string, BROWSER, DB);
+    const matchId = String(latestMatch.match_id);
+    const matchUrl = String(latestMatch.href);
+    if (matchUrl.startsWith('https://portal.ipscess.org/portal/match/')) {
+        await fetchPortalMatchResult(matchId, matchUrl, BROWSER, DB);
+    } else {
+        await fetchMatchResult(Number(matchId), matchUrl, BROWSER, DB);
+    }
 
     return true;
 };
@@ -91,7 +97,7 @@ export const fetchMatchResult = async (matchId: number, matchUrl: string, BROWSE
                 continue;
             }
             const verifyUrl = new URL(String(matchUrl));
-            https://hkg.as.ipscess.org/portal/verify/40?shooter=40
+            // https://hkg.as.ipscess.org/portal/verify/40?shooter=40
             verifyUrl.pathname = verifyUrl.pathname.replace(/\/portal$/, `/portal/verify/${matchId}`);
             verifyUrl.search = new URLSearchParams({
                 shooter: String(shooterId)

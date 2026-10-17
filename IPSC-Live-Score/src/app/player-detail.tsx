@@ -38,7 +38,7 @@ export default function PlayerDetailScreen() {
 		playerRank?: string;
 	}>();
 
-	const matchId = Number(params.matchId);
+	const matchId = params.matchId ?? "";
 	const baseUrl = normalizeBaseUrl(params.baseUrl ?? getDefaultBaseUrl());
 	const matchName = params.matchName ?? "Selected match";
 	const initialGroupName = params.groupName ?? "";
@@ -91,7 +91,7 @@ export default function PlayerDetailScreen() {
 	);
 
 	const loadPlayerDetail = useCallback(async () => {
-		if (!Number.isInteger(matchId) || matchId <= 0) {
+		if (!/^\d+$/.test(matchId) && !/^[0-9a-f-]{36}$/i.test(matchId)) {
 			setError("Invalid match id.");
 			setScoreGroups([]);
 			return;

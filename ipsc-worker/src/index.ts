@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import { calScore } from "./calculateScore";
 import { fetchAllMatch } from "./fetchAllMatch";
 import { fetchLatestMatchResult, fetchMatchResult } from "./fetchLatestMatchResult";
+import { fetchPortalMatchResult } from "./fetchPortalMatchResult";
 
 type MatchListItem = {
 	matchId: number | string;
@@ -78,9 +79,9 @@ app.get("/matches", async (c) => {
 });
 
 app.get("/matches/:matchId/score", async (c) => {
-	const matchId = Number(c.req.param("matchId"));
+	const matchId = c.req.param("matchId");
 	const href = c.req.query("href") ?? "";
-	if (!Number.isInteger(matchId) || matchId <= 0) {
+	if (!/^\d+$/.test(matchId) && !/^[0-9a-f-]{36}$/i.test(matchId)) {
 		return c.json({ error: "Invalid match id" }, 400);
 	}
 
@@ -120,20 +121,24 @@ app.get("/matches/latest/result", async (c) => {
 });
 
 app.get("/matches/:matchId/result", async (c) => {
-	const matchId = Number(c.req.param("matchId"));
+	const matchId = c.req.param("matchId");
 	const href = c.req.query("href") ?? "";
-	if (!Number.isInteger(matchId) || matchId <= 0) {
+	if (!/^\d+$/.test(matchId) && !/^[0-9a-f-]{36}$/i.test(matchId)) {
 		return c.json({ error: "Invalid match id" }, 400);
 	}
 
 	try {
 		const match = await c.env.DB.prepare(`
-					SELECT match_id, href, name, date, club, level, updated_at
-					FROM matches
-					WHERE match_id = ? AND href = ?
-				`).bind(matchId, href).first<MatchListItem>();
+			SELECT match_id, href, name, date, club, level, updated_at
+			FROM matches
+			WHERE match_id = ? AND href = ?
+		`).bind(/^\d+$/.test(matchId) ? Number(matchId) : matchId, href).first<MatchListItem>();
 		if (match) {
-			await fetchMatchResult(matchId, match.href, c.env.BROWSER, c.env.DB);
+			if (match.href.startsWith("https://portal.ipscess.org/portal/match/")) {
+				await fetchPortalMatchResult(matchId, match.href, c.env.BROWSER, c.env.DB);
+			} else {
+				await fetchMatchResult(Number(matchId), match.href, c.env.BROWSER, c.env.DB);
+			}
 			return c.json({ message: "Match result fetched successfully" });
 		}
 		return c.json({ error: "Match not found" }, 404);

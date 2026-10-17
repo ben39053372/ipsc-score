@@ -60,7 +60,7 @@ export const fetchMatches = async (baseUrl: string): Promise<MatchListItem[]> =>
     return (await response.json()) as MatchListItem[];
 };
 
-export const fetchScore = async (baseUrl: string, matchId: number, href: string): Promise<ScoreGroup[]> => {
+export const fetchScore = async (baseUrl: string, matchId: number | string, href: string): Promise<ScoreGroup[]> => {
     const url = new URL(`${baseUrl}/matches/${matchId}/score`);
     const params = new URLSearchParams([["href", href]]);
     url.search = params.toString();

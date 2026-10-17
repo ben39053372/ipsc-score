@@ -1,4 +1,4 @@
-const getResult = async (DB: D1Database, matchId: number, href: string) => {
+const getResult = async (DB: D1Database, matchId: number | string, href: string) => {
     const resultTableName = `match-result-${href}-${matchId}`;
     const resultRow = await DB.prepare(`
         SELECT * FROM "${resultTableName}"
@@ -6,7 +6,7 @@ const getResult = async (DB: D1Database, matchId: number, href: string) => {
     return resultRow || null;
 };
 
-const getShooterList = async (DB: D1Database, matchId: number, href: string) => {
+const getShooterList = async (DB: D1Database, matchId: number | string, href: string) => {
     const tableName = `match-${href}-${matchId}`;
     const resultTableName = `match-result-${href}-${matchId}`;
     const shooterList = await DB.prepare(`
@@ -87,7 +87,7 @@ const groupByGroup = {
 
 type GroupName = keyof typeof groupByGroup;
 
-export const calScore = async (DB: D1Database, matchId: number, href: string, group?: GroupName) => {
+export const calScore = async (DB: D1Database, matchId: number | string, href: string, group?: GroupName) => {
     const matchResult = await getResult(DB, matchId, href);
     if (!matchResult.success) return null;
 

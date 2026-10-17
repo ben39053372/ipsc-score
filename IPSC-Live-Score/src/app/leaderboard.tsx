@@ -32,7 +32,7 @@ export default function LeaderboardScreen() {
 		href?: string;
 	}>();
 
-	const matchId = Number(params.matchId);
+	const matchId = params.matchId ?? "";
 	const baseUrl = normalizeBaseUrl(params.baseUrl ?? getDefaultBaseUrl());
 	const matchName = params.matchName ?? "Selected match";
 	const href = params.href ?? "";
@@ -46,7 +46,7 @@ export default function LeaderboardScreen() {
 	const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
 
 	const loadScore = useCallback(async () => {
-		if (!Number.isInteger(matchId) || matchId <= 0) {
+		if (!/^\d+$/.test(matchId) && !/^[0-9a-f-]{36}$/i.test(matchId)) {
 			setScoreError("Invalid match id.");
 			setScoreGroups([]);
 			return;
