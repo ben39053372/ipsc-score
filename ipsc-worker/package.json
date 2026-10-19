@@ -17,6 +17,8 @@
 	"dependencies": {
 		"cheerio": "^1.2.0",
 		"cloudflare": "^7.0.0",
-		"hono": "^4.13.4"
+		"cloudflare-puppeteer-extra": "^1.0.1",
+		"hono": "^4.13.4",
+		"puppeteer-extra-plugin-stealth": "^2.11.2"
 	}
 }

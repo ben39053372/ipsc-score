@@ -160,7 +160,7 @@ export default {
 				// Every day at 8:00 AM
 				await fetchAllMatch(env.BROWSER, env.DB);
 				break;
-			case "*/10 10-23 * * *":
+			case "*/10 0-15 * * *":
 				// Every ten minutes
 				await enqueueLatestMatchResult(env.DB, env.MATCH_RESULTS_QUEUE);
 				break;

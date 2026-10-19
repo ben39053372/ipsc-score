@@ -71,7 +71,7 @@ export const fetchPortalMatchResult = async (
     const browser = await puppeteer.launch(BROWSER);
     const page = await browser.newPage();
     page.setDefaultTimeout(15000);
-    page.setDefaultNavigationTimeout(25000);
+    page.setDefaultNavigationTimeout(60000);
     await page.setRequestInterception(true);
     page.on('request', (request) => {
         if (['stylesheet', 'font', 'image'].includes(request.resourceType())) {
@@ -138,7 +138,7 @@ export const fetchPortalMatchResult = async (
             });
         const shootersToFetch = eligibleShooters.slice(0, MAX_SHOOTERS_PER_RUN);
         hasMore = eligibleShooters.length > shootersToFetch.length;
-        let processedShooters = 0;
+        let processedThisBatch = 0;
 
         for (const shooter of shootersToFetch) {
 
@@ -229,13 +229,19 @@ export const fetchPortalMatchResult = async (
                     now,
                 )),
             ]);
-            processedShooters++;
+            processedThisBatch++;
         }
+        const progress = await DB.prepare(`
+            SELECT COUNT(*) AS scoredShooters
+            FROM "${matchTableName}"
+        `).first<{ scoredShooters: number }>();
+        const scoredShooters = progress?.scoredShooters ?? 0;
         console.log('Portal match scraper batch completed', {
             matchId,
             totalShooters: shooters.size,
-            processedShooters,
-            deferredShooters: shooters.size - processedShooters,
+            scoredShooters,
+            processedThisBatch,
+            remainingShooters: Math.max(0, shooters.size - scoredShooters),
         });
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
