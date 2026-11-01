@@ -24,6 +24,7 @@ const getShooterList = async (DB: D1Database, matchId: number | string, href: st
 }
 
 const groupByGroup = {
+    "All": () => true,
     // standard
     "Standard OverAll": (s: MatchRow) => s.div === "Standard",
     "Standard Lady": (s: MatchRow) => s.div === "Standard" && s.cat === "Lady",
