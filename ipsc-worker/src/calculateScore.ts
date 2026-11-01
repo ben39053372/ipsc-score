@@ -120,7 +120,7 @@ export const calScore = async (DB: D1Database, matchId: number | string, href: s
             });
             const maxFactor = Math.max(0, ...factors.filter(Number.isFinite));
             const maxPoint = Math.max(...stageResults.map((result) =>
-                [result.a, result.c, result.d, result.mi, result.ns, result.pe]
+                [result.a, result.c, result.d, result.mi]
                     .reduce((sum, hits) => sum + (Number(hits) || 0), 0) * 5,
             ));
             return { stage, maxFactor, maxPoint };
