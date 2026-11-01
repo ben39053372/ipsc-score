@@ -77,6 +77,16 @@ const groupByGroup = {
         s.div === "Classic" && s.cat === "S. Junior",
     "Classic Super Senior": (s: MatchRow) =>
         s.div === "Classic" && s.cat === "S. Senior",
+    // optics
+    "Optics OverAll": (s: MatchRow) => s.div === "Optics",
+    "Optics Lady": (s: MatchRow) => s.div === "Optics" && s.cat === "Lady",
+    "Optics Junior": (s: MatchRow) => s.div === "Optics" && s.cat === "Junior",
+    "Optics Senior": (s: MatchRow) => s.div === "Optics" && s.cat === "Senior",
+    "Optics Super Junior": (s: MatchRow) =>
+        s.div === "Optics" && s.cat === "S. Junior",
+    "Optics Super Senior": (s: MatchRow) =>
+        s.div === "Optics" && s.cat === "S. Senior",
+    // rifles
     "APC Iron": (s: MatchRow) => s.div === "APC Iron",
     "APC Optics": (s: MatchRow) => s.div === "APC Optics",
     "Air Semi Auto Open": (s: MatchRow) => s.div === "Air Semi Auto Open",
