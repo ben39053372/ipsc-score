@@ -1,4 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
@@ -26,6 +27,108 @@ const formatScore = (value: number) => value.toFixed(4);
 
 const formatPercent = (value: number) => `${value.toFixed(2)}%`;
 
+type StoredFakeRecord = {
+	groupName: string;
+	shooter_id: number;
+	name: string;
+	div: string;
+	class_name: string;
+	cat: string | null;
+	stageResult: StageResult;
+};
+
+const isStoredFakeRecord = (value: unknown): value is StoredFakeRecord => {
+	if (!value || typeof value !== "object") {
+		return false;
+	}
+	const record = value as Partial<StoredFakeRecord>;
+	const stage = record.stageResult;
+	return (
+		typeof record.groupName === "string" &&
+		Number.isSafeInteger(record.shooter_id) &&
+		typeof record.name === "string" &&
+		typeof record.div === "string" &&
+		typeof record.class_name === "string" &&
+		(record.cat === null || typeof record.cat === "string") &&
+		!!stage &&
+		typeof stage === "object" &&
+		Number.isSafeInteger(stage.stage) &&
+		typeof stage.factor === "string" &&
+		typeof stage.pts === "string" &&
+		typeof stage.a === "string" &&
+		typeof stage.c === "string" &&
+		typeof stage.d === "string" &&
+		typeof stage.mi === "string" &&
+		typeof stage.ns === "string" &&
+		typeof stage.pe === "string" &&
+		typeof stage.time === "string" &&
+		Number.isFinite(stage.stagePoint)
+	);
+};
+
+const rankGroup = (groupResults: ShooterScore[]): ShooterScore[] => {
+	const rankedPlayers = groupResults
+		.map((item) => ({
+			...item,
+			totalStagePoint: item.stageResult.reduce(
+				(total, stage) => total + stage.stagePoint,
+				0,
+			),
+		}))
+		.sort((left, right) => {
+			if (left.dq !== right.dq) {
+				return left.dq ? 1 : -1;
+			}
+			return right.totalStagePoint - left.totalStagePoint;
+		});
+	const highestScore = rankedPlayers[0]?.totalStagePoint ?? 1;
+	return rankedPlayers.map((item, index) => ({
+		...item,
+		rank: index + 1,
+		percent: (item.totalStagePoint / highestScore) * 100,
+	}));
+};
+
+const mergeFakeRecords = (
+	groups: ScoreGroup[],
+	records: StoredFakeRecord[],
+): ScoreGroup[] =>
+	groups.map((group) => {
+		const groupRecords = records.filter(
+			(record) => record.groupName === group.groupName,
+		);
+		let groupResults = [...group.groupResults];
+		for (const record of groupRecords) {
+			const index = groupResults.findIndex(
+				(item) => item.shooter_id === record.shooter_id,
+			);
+			if (index >= 0) {
+				const player = groupResults[index];
+				groupResults[index] = {
+					...player,
+					stageResult: [
+						...player.stageResult,
+						{ ...record.stageResult, name: player.name, isFake: true },
+					],
+				};
+			} else {
+				groupResults.push({
+					shooter_id: record.shooter_id,
+					name: record.name,
+					div: record.div,
+					class_name: record.class_name,
+					cat: record.cat,
+					totalStagePoint: record.stageResult.stagePoint,
+					dq: false,
+					rank: 0,
+					percent: 0,
+					stageResult: [{ ...record.stageResult, isFake: true }],
+				});
+			}
+		}
+		return { ...group, groupResults: rankGroup(groupResults) };
+	});
+
 export default function PlayerDetailScreen() {
 	const params = useLocalSearchParams<{
 		matchId?: string;
@@ -46,6 +149,7 @@ export default function PlayerDetailScreen() {
 	const playerShooterId = Number(params.playerShooterId);
 	const playerRank = Number(params.playerRank);
 	const href = params.href ?? "";
+	const fakeRecordsStorageKey = `ipsc-score:fake-records:${encodeURIComponent(baseUrl)}:${encodeURIComponent(String(matchId))}:${encodeURIComponent(href)}`;
 
 	const [scoreGroups, setScoreGroups] = useState<ScoreGroup[]>([]);
 	const [selectedGroupName, setSelectedGroupName] = useState<string | null>(
@@ -59,6 +163,10 @@ export default function PlayerDetailScreen() {
 	const [compareError, setCompareError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [removeFakeError, setRemoveFakeError] = useState<string | null>(null);
+	const [removingFakeRecordKey, setRemovingFakeRecordKey] = useState<
+		string | null
+	>(null);
 
 	const findPlayerInGroup = useCallback(
 		(group: ScoreGroup): ShooterScore | null => {
@@ -102,7 +210,38 @@ export default function PlayerDetailScreen() {
 
 		try {
 			const groups = await fetchScore(baseUrl, matchId, href);
-			setScoreGroups(groups);
+			const stored = await AsyncStorage.getItem(fakeRecordsStorageKey);
+			const parsed: unknown = stored === null ? [] : JSON.parse(stored);
+			if (!Array.isArray(parsed) || !parsed.every(isStoredFakeRecord)) {
+				throw new Error("Saved fake score data is invalid.");
+			}
+			const realRecords = new Set(
+				groups.flatMap((group) =>
+					group.groupResults.flatMap((item) =>
+						item.stageResult.map(
+							(stage) =>
+								`${group.groupName}:${item.shooter_id}:${stage.stage}`,
+						),
+					),
+				),
+			);
+			const pendingFakeRecords = parsed.filter(
+				(record) =>
+					!realRecords.has(
+						`${record.groupName}:${record.shooter_id}:${record.stageResult.stage}`,
+					),
+			);
+			if (pendingFakeRecords.length !== parsed.length) {
+				if (pendingFakeRecords.length === 0) {
+					await AsyncStorage.removeItem(fakeRecordsStorageKey);
+				} else {
+					await AsyncStorage.setItem(
+						fakeRecordsStorageKey,
+						JSON.stringify(pendingFakeRecords),
+					);
+				}
+			}
+			setScoreGroups(mergeFakeRecords(groups, pendingFakeRecords));
 		} catch (caughtError) {
 			const message =
 				caughtError instanceof Error
@@ -113,11 +252,79 @@ export default function PlayerDetailScreen() {
 		} finally {
 			setLoading(false);
 		}
-	}, [baseUrl, matchId, href]);
+	}, [baseUrl, matchId, href, fakeRecordsStorageKey]);
 
 	useEffect(() => {
 		void loadPlayerDetail();
 	}, [loadPlayerDetail]);
+
+	const removeFakeRecord = useCallback(
+		async (groupName: string, shooterId: number | null, stage: number) => {
+			if (shooterId === null) {
+				setRemoveFakeError("Cannot remove a fake record without a shooter ID.");
+				return;
+			}
+			const recordKey = `${groupName}:${shooterId}:${stage}`;
+			setRemovingFakeRecordKey(recordKey);
+			setRemoveFakeError(null);
+			try {
+				const stored = await AsyncStorage.getItem(fakeRecordsStorageKey);
+				const parsed: unknown = stored === null ? [] : JSON.parse(stored);
+				if (!Array.isArray(parsed) || !parsed.every(isStoredFakeRecord)) {
+					throw new Error("Saved fake score data is invalid.");
+				}
+				const remainingRecords = parsed.filter(
+					(record) =>
+						!(
+							record.groupName === groupName &&
+							record.shooter_id === shooterId &&
+							record.stageResult.stage === stage
+						),
+				);
+				if (remainingRecords.length === parsed.length) {
+					throw new Error("Fake record was not found in local storage.");
+				}
+				if (remainingRecords.length === 0) {
+					await AsyncStorage.removeItem(fakeRecordsStorageKey);
+				} else {
+					await AsyncStorage.setItem(
+						fakeRecordsStorageKey,
+						JSON.stringify(remainingRecords),
+					);
+				}
+
+				setScoreGroups((groups) =>
+					groups.map((group) => {
+						if (group.groupName !== groupName) {
+							return group;
+						}
+						const groupResults = group.groupResults.flatMap((item) => {
+							if (item.shooter_id !== shooterId) {
+								return [item];
+							}
+							const stageResult = item.stageResult.filter(
+								(record) =>
+									!(record.isFake && record.stage === stage),
+							);
+							return stageResult.length
+								? [{ ...item, stageResult }]
+								: [];
+						});
+						return { ...group, groupResults: rankGroup(groupResults) };
+					}),
+				);
+			} catch (caughtError) {
+				setRemoveFakeError(
+					caughtError instanceof Error
+						? `Could not remove fake record: ${caughtError.message}`
+						: "Could not remove fake record.",
+				);
+			} finally {
+				setRemovingFakeRecordKey(null);
+			}
+		},
+		[fakeRecordsStorageKey],
+	);
 
 	const selectableGroups = useMemo(
 		() => scoreGroups.filter((group) => findPlayerInGroup(group) !== null),
@@ -362,6 +569,9 @@ export default function PlayerDetailScreen() {
 				{derivedError ? (
 					<Text style={styles.errorText}>{derivedError}</Text>
 				) : null}
+				{removeFakeError ? (
+					<Text style={styles.errorText}>{removeFakeError}</Text>
+				) : null}
 
 				<View style={styles.compareControlRow}>
 					<TextInput
@@ -450,8 +660,12 @@ export default function PlayerDetailScreen() {
 															return styles.compareCardWorse;
 														return null;
 													})(),
+													item.left?.isFake && styles.fakeStageRecord,
 												]}
 											>
+												{item.left?.isFake ? (
+													<Text style={styles.fakeRecordLabel}>FAKE RECORD</Text>
+												) : null}
 												<Text style={styles.helpText}>
 													Factor: {item.left?.factor ?? "-"}
 												</Text>
@@ -477,6 +691,29 @@ export default function PlayerDetailScreen() {
 													Stage Point:{" "}
 													{item.left ? formatScore(item.left.stagePoint) : "-"}
 												</Text>
+												{item.left?.isFake && player.shooter_id !== null ? (
+													<Pressable
+														onPress={() =>
+															void removeFakeRecord(
+																selectedGroupName ?? "",
+																player.shooter_id,
+																item.stage,
+															)
+														}
+														disabled={
+															removingFakeRecordKey ===
+															`${selectedGroupName}:${player.shooter_id}:${item.stage}`
+														}
+														style={styles.removeFakeButton}
+													>
+														<Text style={styles.removeFakeButtonText}>
+															{removingFakeRecordKey ===
+															`${selectedGroupName}:${player.shooter_id}:${item.stage}`
+																? "Removing..."
+																: "Remove fake record"}
+														</Text>
+													</Pressable>
+												) : null}
 											</View>
 											<View
 												style={[
@@ -490,8 +727,12 @@ export default function PlayerDetailScreen() {
 															return styles.compareCardWorse;
 														return null;
 													})(),
+													item.right?.isFake && styles.fakeStageRecord,
 												]}
 											>
+												{item.right?.isFake ? (
+													<Text style={styles.fakeRecordLabel}>FAKE RECORD</Text>
+												) : null}
 												<Text style={styles.helpText}>
 													Factor: {item.right?.factor ?? "-"}
 												</Text>
@@ -519,6 +760,31 @@ export default function PlayerDetailScreen() {
 														? formatScore(item.right.stagePoint)
 														: "-"}
 												</Text>
+												{item.right?.isFake &&
+												comparePlayer?.shooter_id !== null &&
+												comparePlayer?.shooter_id !== undefined ? (
+													<Pressable
+														onPress={() =>
+															void removeFakeRecord(
+																selectedGroupName ?? "",
+																comparePlayer.shooter_id,
+																item.stage,
+															)
+														}
+														disabled={
+															removingFakeRecordKey ===
+															`${selectedGroupName}:${comparePlayer.shooter_id}:${item.stage}`
+														}
+														style={styles.removeFakeButton}
+													>
+														<Text style={styles.removeFakeButtonText}>
+															{removingFakeRecordKey ===
+															`${selectedGroupName}:${comparePlayer.shooter_id}:${item.stage}`
+																? "Removing..."
+																: "Remove fake record"}
+														</Text>
+													</Pressable>
+												) : null}
 											</View>
 										</View>
 									</View>
@@ -532,10 +798,18 @@ export default function PlayerDetailScreen() {
 									keyExtractor={(item) => `stage-${item.stage}`}
 									contentContainerStyle={styles.stageListContent}
 									renderItem={({ item }) => (
-										<View style={styles.stageItem}>
+										<View
+											style={[
+												styles.stageItem,
+												item.isFake && styles.fakeStageRecord,
+											]}
+										>
 											<Text style={styles.stageHeading}>
 												Stage {item.stage}
 											</Text>
+											{item.isFake ? (
+												<Text style={styles.fakeRecordLabel}>FAKE RECORD</Text>
+											) : null}
 											<Text style={styles.helpText}>Factor: {item.factor}</Text>
 											<Text style={styles.helpText}>Pts: {item.pts}</Text>
 											<Text style={styles.helpText}>
@@ -548,6 +822,29 @@ export default function PlayerDetailScreen() {
 											<Text style={styles.helpText}>
 												Stage Point: {formatScore(item.stagePoint)}
 											</Text>
+											{item.isFake && player.shooter_id !== null ? (
+												<Pressable
+													onPress={() =>
+														void removeFakeRecord(
+															selectedGroupName ?? "",
+															player.shooter_id,
+															item.stage,
+														)
+													}
+													disabled={
+														removingFakeRecordKey ===
+														`${selectedGroupName}:${player.shooter_id}:${item.stage}`
+													}
+													style={styles.removeFakeButton}
+												>
+													<Text style={styles.removeFakeButtonText}>
+														{removingFakeRecordKey ===
+														`${selectedGroupName}:${player.shooter_id}:${item.stage}`
+															? "Removing..."
+															: "Remove fake record"}
+													</Text>
+												</Pressable>
+											) : null}
 										</View>
 									)}
 								/>
@@ -708,6 +1005,10 @@ const styles = StyleSheet.create({
 		backgroundColor: "#fdecec",
 		borderColor: "#efb5b5",
 	},
+	fakeStageRecord: {
+		borderColor: "#d92d20",
+		borderWidth: 2,
+	},
 	stageListContent: {
 		paddingBottom: 18,
 		gap: 8,
@@ -724,6 +1025,25 @@ const styles = StyleSheet.create({
 		fontWeight: "700",
 		color: "#1d2f4c",
 		marginBottom: 2,
+	},
+	fakeRecordLabel: {
+		color: "#b42318",
+		fontSize: 11,
+		fontWeight: "700",
+	},
+	removeFakeButton: {
+		alignSelf: "flex-start",
+		marginTop: 6,
+		borderWidth: 1,
+		borderColor: "#d92d20",
+		borderRadius: 6,
+		paddingHorizontal: 8,
+		paddingVertical: 5,
+	},
+	removeFakeButtonText: {
+		color: "#b42318",
+		fontSize: 12,
+		fontWeight: "600",
 	},
 	groupSelectorWrap: {
 		flex: 1,

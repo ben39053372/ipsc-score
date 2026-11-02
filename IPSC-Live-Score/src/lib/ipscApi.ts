@@ -21,6 +21,7 @@ export type StageResult = {
     pe: string;
     time: string;
     stagePoint: number;
+    isFake?: boolean;
 };
 
 export type ShooterScore = {

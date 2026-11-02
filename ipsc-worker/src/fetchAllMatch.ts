@@ -5,7 +5,6 @@ import Cloudflare from 'cloudflare';
 const matchUrls = [
     'https://hkg.as.ipscess.org/portal',
     "https://hkg02.as.ipscess.org/portal",
-    'https://portal.ipscess.org/portal?level=all&region=HKG',
 ];
 
 const parseMatchDate = (value: string): Date | null => {
