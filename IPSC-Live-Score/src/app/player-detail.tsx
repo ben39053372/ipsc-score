@@ -5,6 +5,7 @@ import {
 	ActivityIndicator,
 	FlatList,
 	Keyboard,
+	Modal,
 	Platform,
 	Pressable,
 	StyleSheet,
@@ -123,6 +124,7 @@ const mergeFakeRecords = (
 					rank: 0,
 					percent: 0,
 					stageResult: [{ ...record.stageResult, isFake: true }],
+					isFakePlayer: true,
 				});
 			}
 		}
@@ -164,6 +166,9 @@ export default function PlayerDetailScreen() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [removeFakeError, setRemoveFakeError] = useState<string | null>(null);
+	const [clearAllFakeModalVisible, setClearAllFakeModalVisible] =
+		useState(false);
+	const [clearingAllFakeRecords, setClearingAllFakeRecords] = useState(false);
 	const [removingFakeRecordKey, setRemovingFakeRecordKey] = useState<
 		string | null
 	>(null);
@@ -325,6 +330,43 @@ export default function PlayerDetailScreen() {
 		},
 		[fakeRecordsStorageKey],
 	);
+
+	const hasFakeRecords = scoreGroups.some((group) =>
+		group.groupResults.some((item) =>
+			item.stageResult.some((stage) => stage.isFake),
+		),
+	);
+
+	const removeAllFakeRecords = async () => {
+		setClearingAllFakeRecords(true);
+		setRemoveFakeError(null);
+		try {
+			await AsyncStorage.removeItem(fakeRecordsStorageKey);
+			setScoreGroups((groups) =>
+				groups.map((group) => {
+					const groupResults = group.groupResults.flatMap((item) => {
+						const stageResult = item.stageResult.filter(
+							(stage) => !stage.isFake,
+						);
+						if (!stageResult.length && item.isFakePlayer) {
+							return [];
+						}
+						return [{ ...item, stageResult }];
+					});
+					return { ...group, groupResults: rankGroup(groupResults) };
+				}),
+			);
+			setClearAllFakeModalVisible(false);
+		} catch (caughtError) {
+			setRemoveFakeError(
+				caughtError instanceof Error
+					? `Could not remove fake records: ${caughtError.message}`
+					: "Could not remove fake records.",
+			);
+		} finally {
+			setClearingAllFakeRecords(false);
+		}
+	};
 
 	const selectableGroups = useMemo(
 		() => scoreGroups.filter((group) => findPlayerInGroup(group) !== null),
@@ -638,6 +680,16 @@ export default function PlayerDetailScreen() {
 								</View>
 							) : null}
 						</View>
+						{hasFakeRecords ? (
+							<Pressable
+								onPress={() => setClearAllFakeModalVisible(true)}
+								style={styles.removeAllFakeButton}
+							>
+								<Text style={styles.removeFakeButtonText}>
+									Remove All Fake Records
+								</Text>
+							</Pressable>
+						) : null}
 
 						{comparePlayer ? (
 							<FlatList
@@ -853,6 +905,44 @@ export default function PlayerDetailScreen() {
 					</>
 				) : null}
 			</View>
+			<Modal
+				animationType="fade"
+				transparent
+				visible={clearAllFakeModalVisible}
+				onRequestClose={() => setClearAllFakeModalVisible(false)}
+			>
+				<View style={styles.modalBackdrop}>
+					<View style={styles.modalCard}>
+						<Text style={styles.modalTitle}>Remove All Fake Records?</Text>
+						<Text style={styles.helpText}>
+							This removes every fake record for this match from this device.
+							Real score data will not be changed.
+						</Text>
+						<View style={styles.modalActions}>
+							<Pressable
+								onPress={() => setClearAllFakeModalVisible(false)}
+								disabled={clearingAllFakeRecords}
+								style={[styles.modalButton, styles.cancelButton]}
+							>
+								<Text style={styles.cancelButtonText}>Cancel</Text>
+							</Pressable>
+							<Pressable
+								onPress={() => void removeAllFakeRecords()}
+								disabled={clearingAllFakeRecords}
+								style={[
+									styles.modalButton,
+									styles.removeAllConfirmButton,
+									clearingAllFakeRecords && styles.disabledButton,
+								]}
+							>
+								<Text style={styles.confirmButtonText}>
+									{clearingAllFakeRecords ? "Removing..." : "Remove All"}
+								</Text>
+							</Pressable>
+						</View>
+					</View>
+				</View>
+			</Modal>
 			<AdBanner
 				adUnitId={
 					Platform.OS === "ios"
@@ -1031,6 +1121,15 @@ const styles = StyleSheet.create({
 		fontSize: 11,
 		fontWeight: "700",
 	},
+	removeAllFakeButton: {
+		alignSelf: "flex-end",
+		marginBottom: 8,
+		borderWidth: 1,
+		borderColor: "#d92d20",
+		borderRadius: 6,
+		paddingHorizontal: 10,
+		paddingVertical: 7,
+	},
 	removeFakeButton: {
 		alignSelf: "flex-start",
 		marginTop: 6,
@@ -1044,6 +1143,52 @@ const styles = StyleSheet.create({
 		color: "#b42318",
 		fontSize: 12,
 		fontWeight: "600",
+	},
+	modalBackdrop: {
+		flex: 1,
+		backgroundColor: "rgba(12, 24, 42, 0.55)",
+		justifyContent: "center",
+		padding: 20,
+	},
+	modalCard: {
+		backgroundColor: "#ffffff",
+		borderRadius: 14,
+		padding: 18,
+		gap: 8,
+	},
+	modalTitle: {
+		fontSize: 18,
+		fontWeight: "700",
+		color: "#16243b",
+	},
+	modalActions: {
+		flexDirection: "row",
+		justifyContent: "flex-end",
+		gap: 8,
+		marginTop: 8,
+	},
+	modalButton: {
+		paddingHorizontal: 16,
+		paddingVertical: 10,
+		borderRadius: 8,
+		alignItems: "center",
+	},
+	cancelButton: {
+		backgroundColor: "#edf2fb",
+	},
+	cancelButtonText: {
+		color: "#1d2f4c",
+		fontWeight: "600",
+	},
+	removeAllConfirmButton: {
+		backgroundColor: "#b42318",
+	},
+	confirmButtonText: {
+		color: "#ffffff",
+		fontWeight: "600",
+	},
+	disabledButton: {
+		opacity: 0.6,
 	},
 	groupSelectorWrap: {
 		flex: 1,

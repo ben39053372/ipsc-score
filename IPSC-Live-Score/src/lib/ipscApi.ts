@@ -35,6 +35,7 @@ export type ShooterScore = {
     rank: number;
     percent: number;
     stageResult: StageResult[];
+    isFakePlayer?: boolean;
 };
 
 export type ScoreGroup = {

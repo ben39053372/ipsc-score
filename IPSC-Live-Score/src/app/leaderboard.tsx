@@ -1,5 +1,5 @@
-import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
@@ -76,7 +76,9 @@ const createStageRecord = (
 		}
 		const count = Number(value);
 		if (!Number.isSafeInteger(count) || (!allowZero && count < 1)) {
-			throw new Error(`${label} must be ${allowZero ? "zero or more" : "at least 1"}.`);
+			throw new Error(
+				`${label} must be ${allowZero ? "zero or more" : "at least 1"}.`,
+			);
 		}
 		return count;
 	};
@@ -260,6 +262,7 @@ const mergeFakeRecords = (
 					rank: 0,
 					percent: 0,
 					stageResult: [record.stageResult],
+					isFakePlayer: true,
 				});
 			}
 		}
@@ -293,11 +296,22 @@ export default function LeaderboardScreen() {
 	);
 	const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
 	const [appendModalVisible, setAppendModalVisible] = useState(false);
+	const [clearFakeRecordsModalVisible, setClearFakeRecordsModalVisible] =
+		useState(false);
+	const [clearFakeRecordsError, setClearFakeRecordsError] = useState<
+		string | null
+	>(null);
+	const [clearingFakeRecords, setClearingFakeRecords] = useState(false);
 	const [shooterIdInput, setShooterIdInput] = useState("");
 	const [stageRecordInput, setStageRecordInput] =
 		useState<FakeRecordInput>(emptyFakeRecord);
 	const [appendError, setAppendError] = useState<string | null>(null);
 	const [savingFakeRecord, setSavingFakeRecord] = useState(false);
+	const hasFakeRecords = scoreGroups.some((group) =>
+		group.groupResults.some((player) =>
+			player.stageResult.some((stage) => stage.isFake),
+		),
+	);
 
 	const loadScore = useCallback(async () => {
 		if (!/^\d+$/.test(matchId) && !/^[0-9a-f-]{36}$/i.test(matchId)) {
@@ -313,8 +327,7 @@ export default function LeaderboardScreen() {
 			const data = await fetchScore(baseUrl, matchId, href);
 			setScoreGroups(data);
 			try {
-				const savedRecords =
-					await readStoredFakeRecords(fakeRecordsStorageKey);
+				const savedRecords = await readStoredFakeRecords(fakeRecordsStorageKey);
 				const realRecords = new Set(
 					data.flatMap((group) =>
 						group.groupResults.flatMap((player) =>
@@ -331,10 +344,7 @@ export default function LeaderboardScreen() {
 						),
 				);
 				if (pendingRecords.length !== savedRecords.length) {
-					await writeStoredFakeRecords(
-						fakeRecordsStorageKey,
-						pendingRecords,
-					);
+					await writeStoredFakeRecords(fakeRecordsStorageKey, pendingRecords);
 				}
 				setScoreGroups(mergeFakeRecords(data, pendingRecords));
 			} catch (error) {
@@ -400,10 +410,11 @@ export default function LeaderboardScreen() {
 			return null;
 		}
 
-		const shooter = scoreGroups
-			.find((group) => group.groupName === selectedGroupName)
-			?.groupResults.find((player) => player.shooter_id === shooterId)
-			?? scoreGroups
+		const shooter =
+			scoreGroups
+				.find((group) => group.groupName === selectedGroupName)
+				?.groupResults.find((player) => player.shooter_id === shooterId) ??
+			scoreGroups
 				.flatMap((group) => group.groupResults)
 				.find((player) => player.shooter_id === shooterId);
 
@@ -425,8 +436,7 @@ export default function LeaderboardScreen() {
 		const matchingPlayers = scoreGroups.flatMap((group) =>
 			group.groupResults.filter((player) => player.shooter_id === shooterId),
 		);
-		const shooterName =
-			matchingPlayers[0]?.name ?? `Fake shooter ${shooterId}`;
+		const shooterName = matchingPlayers[0]?.name ?? `Fake shooter ${shooterId}`;
 
 		const stageValue = Number(stageRecordInput.stage.trim());
 		if (!Number.isSafeInteger(stageValue) || stageValue < 1) {
@@ -447,10 +457,17 @@ export default function LeaderboardScreen() {
 		let stageRecordsByGroup: Map<string, StageResult>;
 		try {
 			stageRecordsByGroup = new Map<string, StageResult>(
-				scoreGroups.map((group) => [
-					group.groupName,
-					createStageRecord(stageRecordInput, shooterName, group.groupResults),
-				] as const),
+				scoreGroups.map(
+					(group) =>
+						[
+							group.groupName,
+							createStageRecord(
+								stageRecordInput,
+								shooterName,
+								group.groupResults,
+							),
+						] as const,
+				),
 			);
 		} catch (error) {
 			setAppendError(
@@ -483,8 +500,7 @@ export default function LeaderboardScreen() {
 		setSavingFakeRecord(true);
 		setAppendError(null);
 		try {
-			const savedRecords =
-				await readStoredFakeRecords(fakeRecordsStorageKey);
+			const savedRecords = await readStoredFakeRecords(fakeRecordsStorageKey);
 			const nextStoredRecords = [
 				...savedRecords.filter(
 					(record) =>
@@ -495,10 +511,7 @@ export default function LeaderboardScreen() {
 				),
 				...recordsToSave,
 			];
-			await writeStoredFakeRecords(
-				fakeRecordsStorageKey,
-				nextStoredRecords,
-			);
+			await writeStoredFakeRecords(fakeRecordsStorageKey, nextStoredRecords);
 			setScoreGroups(
 				scoreGroups.map((group) => {
 					const stageRecord = stageRecordsByGroup.get(group.groupName);
@@ -537,6 +550,7 @@ export default function LeaderboardScreen() {
 									rank: 0,
 									percent: 0,
 									stageResult: [stageRecord],
+									isFakePlayer: true,
 								},
 							];
 					return { ...group, groupResults: rankGroup(groupResults) };
@@ -553,6 +567,37 @@ export default function LeaderboardScreen() {
 			);
 		} finally {
 			setSavingFakeRecord(false);
+		}
+	};
+
+	const clearAllFakeRecords = async () => {
+		setClearingFakeRecords(true);
+		setClearFakeRecordsError(null);
+		try {
+			await AsyncStorage.removeItem(fakeRecordsStorageKey);
+			setScoreGroups((groups) =>
+				groups.map((group) => {
+					const groupResults = group.groupResults.flatMap((player) => {
+						const stageResult = player.stageResult.filter(
+							(stage) => !stage.isFake,
+						);
+						if (!stageResult.length && player.isFakePlayer) {
+							return [];
+						}
+						return [{ ...player, stageResult }];
+					});
+					return { ...group, groupResults: rankGroup(groupResults) };
+				}),
+			);
+			setClearFakeRecordsModalVisible(false);
+		} catch (error) {
+			setClearFakeRecordsError(
+				error instanceof Error
+					? `Could not remove fake records: ${error.message}`
+					: "Could not remove fake records.",
+			);
+		} finally {
+			setClearingFakeRecords(false);
 		}
 	};
 
@@ -577,8 +622,65 @@ export default function LeaderboardScreen() {
 					>
 						<Text style={styles.secondaryButtonText}>Refresh Score</Text>
 					</Pressable>
+					<Pressable
+						onPress={() => {
+							setClearFakeRecordsError(null);
+							setClearFakeRecordsModalVisible(true);
+						}}
+						disabled={!hasFakeRecords || clearingFakeRecords}
+						style={[
+							styles.clearFakeRecordsButton,
+							(!hasFakeRecords || clearingFakeRecords) && styles.disabledButton,
+						]}
+					>
+						<Text style={styles.clearFakeRecordsButtonText}>
+							Remove All Fake Records
+						</Text>
+					</Pressable>
 				</View>
+				{clearFakeRecordsError ? (
+					<Text style={styles.errorText}>{clearFakeRecordsError}</Text>
+				) : null}
 			</View>
+
+			<Modal
+				animationType="fade"
+				transparent
+				visible={clearFakeRecordsModalVisible}
+				onRequestClose={() => setClearFakeRecordsModalVisible(false)}
+			>
+				<View style={styles.modalBackdrop}>
+					<View style={styles.modalCard}>
+						<Text style={styles.modalTitle}>Remove All Fake Records?</Text>
+						<Text style={styles.modalHelpText}>
+							This removes every fake record for this match from this device.
+							Real score data will not be changed.
+						</Text>
+						<View style={styles.modalActions}>
+							<Pressable
+								onPress={() => setClearFakeRecordsModalVisible(false)}
+								disabled={clearingFakeRecords}
+								style={[styles.modalButton, styles.cancelButton]}
+							>
+								<Text style={styles.cancelButtonText}>Cancel</Text>
+							</Pressable>
+							<Pressable
+								onPress={() => void clearAllFakeRecords()}
+								disabled={clearingFakeRecords}
+								style={[
+									styles.modalButton,
+									styles.removeAllConfirmButton,
+									clearingFakeRecords && styles.disabledButton,
+								]}
+							>
+								<Text style={styles.confirmButtonText}>
+									{clearingFakeRecords ? "Removing..." : "Remove All"}
+								</Text>
+							</Pressable>
+						</View>
+					</View>
+				</View>
+			</Modal>
 
 			<Modal
 				animationType="fade"
@@ -598,9 +700,7 @@ export default function LeaderboardScreen() {
 							contentContainerStyle={styles.modalFormContent}
 							keyboardShouldPersistTaps="handled"
 						>
-							<View
-								style={[styles.formField, styles.fullWidthField]}
-							>
+							<View style={[styles.formField, styles.fullWidthField]}>
 								<Text style={styles.inputLabel}>Shooter ID</Text>
 								<TextInput
 									value={shooterIdInput}
@@ -830,6 +930,20 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		gap: 8,
 	},
+	clearFakeRecordsButton: {
+		flex: 1,
+		borderWidth: 1,
+		borderColor: "#d92d20",
+		borderRadius: 8,
+		paddingHorizontal: 6,
+		paddingVertical: 10,
+		alignItems: "center",
+	},
+	clearFakeRecordsButtonText: {
+		color: "#b42318",
+		fontWeight: "600",
+		fontSize: 13,
+	},
 	appendButton: {
 		flex: 1,
 		backgroundColor: "#52647e",
@@ -926,6 +1040,9 @@ const styles = StyleSheet.create({
 	},
 	confirmButton: {
 		backgroundColor: "#245fb7",
+	},
+	removeAllConfirmButton: {
+		backgroundColor: "#b42318",
 	},
 	disabledButton: {
 		opacity: 0.6,
