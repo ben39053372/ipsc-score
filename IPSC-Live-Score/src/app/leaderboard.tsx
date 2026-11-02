@@ -622,21 +622,23 @@ export default function LeaderboardScreen() {
 					>
 						<Text style={styles.secondaryButtonText}>Refresh Score</Text>
 					</Pressable>
-					<Pressable
-						onPress={() => {
-							setClearFakeRecordsError(null);
-							setClearFakeRecordsModalVisible(true);
-						}}
-						disabled={!hasFakeRecords || clearingFakeRecords}
-						style={[
-							styles.clearFakeRecordsButton,
-							(!hasFakeRecords || clearingFakeRecords) && styles.disabledButton,
-						]}
-					>
-						<Text style={styles.clearFakeRecordsButtonText}>
-							Remove All Fake Records
-						</Text>
-					</Pressable>
+					{hasFakeRecords ? (
+						<Pressable
+							onPress={() => {
+								setClearFakeRecordsError(null);
+								setClearFakeRecordsModalVisible(true);
+							}}
+							disabled={clearingFakeRecords}
+							style={[
+								styles.clearFakeRecordsButton,
+								clearingFakeRecords && styles.disabledButton,
+							]}
+						>
+							<Text style={styles.clearFakeRecordsButtonText}>
+								Remove All Fake Records
+							</Text>
+						</Pressable>
+					) : null}
 				</View>
 				{clearFakeRecordsError ? (
 					<Text style={styles.errorText}>{clearFakeRecordsError}</Text>
