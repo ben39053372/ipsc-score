@@ -1,3 +1,10 @@
+import {
+    calculatePredictions,
+    DEFAULT_PREDICTION_OPTIONS,
+    isDisqualified,
+    type PredictionOptions,
+} from "./predictScore.ts";
+
 const getResult = async (DB: D1Database, matchId: number | string, href: string) => {
     const resultTableName = `match-result-${href}-${matchId}`;
     const resultRow = await DB.prepare(`
@@ -98,11 +105,37 @@ const groupByGroup = {
 
 type GroupName = keyof typeof groupByGroup;
 
-export const calScore = async (DB: D1Database, matchId: number | string, href: string, group?: GroupName) => {
+export const calScore = async (
+    DB: D1Database,
+    matchId: number | string,
+    href: string,
+    group?: GroupName,
+    predictionOptions: PredictionOptions = DEFAULT_PREDICTION_OPTIONS,
+) => {
     const matchResult = await getResult(DB, matchId, href);
     if (!matchResult.success) return null;
 
     const shooterList = await getShooterList(DB, matchId, href);
+    const predictions = calculatePredictions(shooterList.results, matchResult.results, predictionOptions);
+    const divisionByShooter = new Map(shooterList.results.map((shooter) => [shooter.name, shooter.div]));
+    const divisionStageMaxMeta = new Map<string, Map<number, { maxFactor: number; maxPoint: number }>>();
+    for (const result of matchResult.results) {
+        const division = divisionByShooter.get(result.name);
+        if (!division) continue;
+
+        const divisionStages = divisionStageMaxMeta.get(division) ?? new Map();
+        const current = divisionStages.get(result.stage) ?? { maxFactor: 0, maxPoint: 0 };
+        const points = Number(result.pts);
+        const time = Number(result.time);
+        const factor = time > 0 ? points / time : 0;
+        const maxPoint = [result.a, result.c, result.d, result.mi]
+            .reduce((sum, hits) => sum + (Number(hits) || 0), 0) * 5;
+        divisionStages.set(result.stage, {
+            maxFactor: Math.max(current.maxFactor, Number.isFinite(factor) ? factor : 0),
+            maxPoint: Math.max(current.maxPoint, maxPoint),
+        });
+        divisionStageMaxMeta.set(division, divisionStages);
+    }
 
     const shooterByGroup = Object.entries(groupByGroup).filter(([groupName, _]) => !group || groupName === group).map(([groupName, filterFn]) => {
         const groupPlayers = shooterList.results.filter((row) => filterFn(row));
@@ -128,7 +161,7 @@ export const calScore = async (DB: D1Database, matchId: number | string, href: s
         })
         return {
             groupName, groupResults: groupPlayers.map((player) => {
-                const stageResult = matchResult.results.filter((r) => r.name === player.name).map(r => {
+                const actualStageResults = matchResult.results.filter((r) => r.name === player.name).map(r => {
                     const stageMax = groupStageMaxMeta.find(f => parseInt(f.stage) === r.stage)
                     const points = Number(r.pts);
                     const time = Number(r.time);
@@ -138,9 +171,67 @@ export const calScore = async (DB: D1Database, matchId: number | string, href: s
                         : 0;
                     return { ...r, stagePoint };
                 });
-                const totalStagePoint = stageResult.map(r => r.stagePoint).reduce((acc, curr) => acc + curr, 0);
-                const dq = stageResult.every(r => r.factor === "0.0000" && r.pts !== "0")
-                return { ...player, totalStagePoint, stageResult, dq };
+                const dq = isDisqualified(matchResult.results.filter((r) => r.name === player.name));
+                const prediction = predictions.get(player.name);
+                const predictionStages = (prediction?.stages ?? []).map((stage) => {
+                    const stageMax = groupName === "All"
+                        ? divisionStageMaxMeta.get(player.div)?.get(stage.stage)
+                        : groupStageMaxMeta.find((item) => Number(item.stage) === stage.stage);
+                    if (stage.status !== "predicted" || stage.predictedHF === undefined) {
+                        return stage;
+                    }
+                    const predictedStagePoint = stageMax && stageMax.maxFactor > 0
+                        ? (stage.predictedHF / stageMax.maxFactor) * stageMax.maxPoint
+                        : undefined;
+                    return predictedStagePoint !== undefined && Number.isFinite(predictedStagePoint)
+                        ? { ...stage, predictedStagePoint }
+                        : stage;
+                });
+                const playerPrediction = prediction
+                    ? { ...prediction, stages: predictionStages }
+                    : undefined;
+                const predictedStageResults = predictionStages.flatMap((stage) => {
+                    if (stage.status !== "predicted" || stage.predictedHF === undefined) {
+                        return [];
+                    }
+                    const predictedStagePoint = stage.predictedStagePoint;
+                    return [{
+                        name: player.name,
+                        stage: stage.stage,
+                        factor: stage.predictedHF.toFixed(4),
+                        pts: "",
+                        a: "",
+                        c: "",
+                        d: "",
+                        mi: "",
+                        ns: "",
+                        pe: "",
+                        time: "",
+                        ...(predictedStagePoint !== undefined && Number.isFinite(predictedStagePoint)
+                            ? { stagePoint: predictedStagePoint }
+                            : {}),
+                        isPrediction: true,
+                        predictionDetails: {
+                            baselineHF: stage.baselineHF,
+                            averageRelativeHF: playerPrediction?.averageRelativeHF,
+                            n: playerPrediction?.n,
+                            lambda: playerPrediction?.lambda,
+                            k: playerPrediction?.k,
+                            priorRelativeHF: playerPrediction?.priorRelativeHF,
+                            predictedRelativeHF: playerPrediction?.predictedRelativeHF,
+                        },
+                    }];
+                });
+                const stageResult = [...actualStageResults, ...predictedStageResults]
+                    .sort((left, right) => left.stage - right.stage);
+                const totalStagePoint = actualStageResults.reduce((total, result) => total + result.stagePoint, 0);
+                return {
+                    ...player,
+                    totalStagePoint,
+                    stageResult,
+                    dq,
+                    prediction: playerPrediction,
+                };
             }).sort((a, b) => {
                 if (a.dq !== b.dq) return a.dq ? 1 : -1;
                 return b.totalStagePoint - a.totalStagePoint;

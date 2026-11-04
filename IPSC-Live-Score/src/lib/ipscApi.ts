@@ -8,6 +8,30 @@ export type MatchListItem = {
     updated_at: string;
 };
 
+export type PredictionStageResult = {
+    stage: number;
+    status: "predicted" | "unavailable";
+    baselineHF?: number;
+    predictedHF?: number;
+    predictedStagePoint?: number;
+    reason?: string;
+};
+
+export type ShooterPrediction = {
+    status: "predicted" | "not_eligible" | "unavailable";
+    reason?: string;
+    completedStageCount: number;
+    totalStageCount: number;
+    n: number;
+    averageRelativeHF?: number;
+    lambda: number;
+    k: number;
+    priorRelativeHF: number;
+    predictedRelativeHF?: number;
+    referenceShooterCount: number;
+    stages: PredictionStageResult[];
+};
+
 export type StageResult = {
     name: string;
     stage: number;
@@ -20,8 +44,18 @@ export type StageResult = {
     ns: string;
     pe: string;
     time: string;
-    stagePoint: number;
+    stagePoint?: number;
     isFake?: boolean;
+    isPrediction?: boolean;
+    predictionDetails?: {
+        baselineHF?: number;
+        averageRelativeHF?: number;
+        n?: number;
+        lambda?: number;
+        k?: number;
+        priorRelativeHF?: number;
+        predictedRelativeHF?: number;
+    };
 };
 
 export type ShooterScore = {
@@ -35,6 +69,7 @@ export type ShooterScore = {
     rank: number;
     percent: number;
     stageResult: StageResult[];
+    prediction?: ShooterPrediction;
     isFakePlayer?: boolean;
 };
 

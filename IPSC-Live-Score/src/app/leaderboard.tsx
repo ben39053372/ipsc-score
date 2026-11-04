@@ -97,7 +97,7 @@ const createStageRecord = (
 	const points = a * 5 + c * 3 + d - (miss + noShoot + pe) * 10;
 	const factor = points / time;
 	const stageRecords = groupResults.flatMap((player) =>
-		player.stageResult.filter((record) => record.stage === stage),
+		player.stageResult.filter((record) => record.stage === stage && !record.isPrediction),
 	);
 	const maxFactor = Math.max(
 		0,
@@ -141,7 +141,7 @@ const rankGroup = (groupResults: ShooterScore[]): ShooterScore[] => {
 		.map((player) => ({
 			...player,
 			totalStagePoint: player.stageResult.reduce(
-				(total, stage) => total + stage.stagePoint,
+				(total, stage) => total + (stage.isPrediction ? 0 : stage.stagePoint ?? 0),
 				0,
 			),
 		}))
@@ -246,7 +246,9 @@ const mergeFakeRecords = (
 				groupResults[playerIndex] = {
 					...player,
 					stageResult: [
-						...player.stageResult,
+						...player.stageResult.filter(
+							(stage) => !(stage.isPrediction && stage.stage === record.stageResult.stage),
+						),
 						{ ...record.stageResult, name: player.name },
 					],
 				};
@@ -257,7 +259,7 @@ const mergeFakeRecords = (
 					div: record.div,
 					class_name: record.class_name,
 					cat: record.cat,
-					totalStagePoint: record.stageResult.stagePoint,
+					totalStagePoint: record.stageResult.stagePoint ?? 0,
 					dq: false,
 					rank: 0,
 					percent: 0,
@@ -445,7 +447,9 @@ export default function LeaderboardScreen() {
 		}
 		if (
 			matchingPlayers.some((player) =>
-				player.stageResult.some((stage) => stage.stage === stageValue),
+				player.stageResult.some(
+					(stage) => stage.stage === stageValue && !stage.isPrediction,
+				),
 			)
 		) {
 			setAppendError(
@@ -531,7 +535,10 @@ export default function LeaderboardScreen() {
 									? {
 											...player,
 											stageResult: [
-												...player.stageResult,
+												...player.stageResult.filter(
+													(stage) =>
+														!(stage.isPrediction && stage.stage === stageRecord.stage),
+												),
 												{ ...stageRecord, isFake: true },
 											],
 										}
@@ -545,7 +552,7 @@ export default function LeaderboardScreen() {
 									div: "Unknown",
 									class_name: "Unknown",
 									cat: null,
-									totalStagePoint: stageRecord.stagePoint,
+									totalStagePoint: stageRecord.stagePoint ?? 0,
 									dq: false,
 									rank: 0,
 									percent: 0,

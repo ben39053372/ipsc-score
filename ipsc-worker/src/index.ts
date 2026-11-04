@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import { calScore } from "./calculateScore";
 import { fetchAllMatch } from "./fetchAllMatch";
 import { enqueueLatestMatchResult, enqueueMatchResult, type MatchResultJob, processMatchResultJob } from "./matchResultQueue";
+import { DEFAULT_PREDICTION_OPTIONS, validatePredictionOptions } from "./predictScore";
 
 type MatchListItem = {
 	matchId: number | string;
@@ -85,8 +86,24 @@ app.get("/matches/:matchId/score", async (c) => {
 		return c.json({ error: "Invalid match id" }, 400);
 	}
 
+	const predictionOptions = {
+		k: c.req.query("k") === undefined
+			? DEFAULT_PREDICTION_OPTIONS.k
+			: Number(c.req.query("k")),
+		priorRelativeHF: c.req.query("priorRelativeHF") === undefined
+			? DEFAULT_PREDICTION_OPTIONS.priorRelativeHF
+			: Number(c.req.query("priorRelativeHF")),
+	};
 	try {
-		const score = await calScore(c.env.DB, matchId, href);
+		validatePredictionOptions(predictionOptions);
+	} catch (error) {
+		return c.json({
+			error: error instanceof Error ? error.message : "Invalid prediction options",
+		}, 400);
+	}
+
+	try {
+		const score = await calScore(c.env.DB, matchId, href, undefined, predictionOptions);
 		if (score === null) {
 			return c.json({ error: "Match score not found" }, 404);
 		}

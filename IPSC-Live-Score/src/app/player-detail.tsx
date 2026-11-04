@@ -72,7 +72,7 @@ const rankGroup = (groupResults: ShooterScore[]): ShooterScore[] => {
 		.map((item) => ({
 			...item,
 			totalStagePoint: item.stageResult.reduce(
-				(total, stage) => total + stage.stagePoint,
+				(total, stage) => total + (stage.isPrediction ? 0 : stage.stagePoint ?? 0),
 				0,
 			),
 		}))
@@ -108,7 +108,9 @@ const mergeFakeRecords = (
 				groupResults[index] = {
 					...player,
 					stageResult: [
-						...player.stageResult,
+						...player.stageResult.filter(
+							(stage) => !(stage.isPrediction && stage.stage === record.stageResult.stage),
+						),
 						{ ...record.stageResult, name: player.name, isFake: true },
 					],
 				};
@@ -119,7 +121,7 @@ const mergeFakeRecords = (
 					div: record.div,
 					class_name: record.class_name,
 					cat: record.cat,
-					totalStagePoint: record.stageResult.stagePoint,
+					totalStagePoint: record.stageResult.stagePoint ?? 0,
 					dq: false,
 					rank: 0,
 					percent: 0,
@@ -713,35 +715,48 @@ export default function PlayerDetailScreen() {
 														return null;
 													})(),
 													item.left?.isFake && styles.fakeStageRecord,
+													item.left?.isPrediction && styles.predictedStageRecord,
 												]}
 											>
+												{item.left?.isPrediction ? (
+													<Text style={styles.predictedRecordLabel}>PREDICTED</Text>
+												) : null}
 												{item.left?.isFake ? (
 													<Text style={styles.fakeRecordLabel}>FAKE RECORD</Text>
 												) : null}
 												<Text style={styles.helpText}>
-													Factor: {item.left?.factor ?? "-"}
+													{item.left?.isPrediction ? "Predicted HF" : "Factor"}:{" "}
+													{item.left?.factor ?? "-"}
 												</Text>
+												{!item.left?.isPrediction ? (
+													<>
+														<Text style={styles.helpText}>
+															Pts: {item.left?.pts ?? "-"}
+														</Text>
+														<Text style={styles.helpText}>
+															A/C/D:{" "}
+															{item.left
+																? `${item.left.a}/${item.left.c}/${item.left.d}`
+																: "-"}
+														</Text>
+														<Text style={styles.helpText}>
+															MI/NS/PE:{" "}
+															{item.left
+																? `${item.left.mi}/${item.left.ns}/${item.left.pe}`
+																: "-"}
+														</Text>
+														<Text style={styles.helpText}>
+															Time: {item.left?.time ?? "-"}
+														</Text>
+													</>
+												) : null}
 												<Text style={styles.helpText}>
-													Pts: {item.left?.pts ?? "-"}
-												</Text>
-												<Text style={styles.helpText}>
-													A/C/D:{" "}
-													{item.left
-														? `${item.left.a}/${item.left.c}/${item.left.d}`
+													{item.left?.isPrediction
+														? "Predicted Stage Points"
+														: "Stage Point"}:{" "}
+													{item.left?.stagePoint !== undefined
+														? formatScore(item.left.stagePoint)
 														: "-"}
-												</Text>
-												<Text style={styles.helpText}>
-													MI/NS/PE:{" "}
-													{item.left
-														? `${item.left.mi}/${item.left.ns}/${item.left.pe}`
-														: "-"}
-												</Text>
-												<Text style={styles.helpText}>
-													Time: {item.left?.time ?? "-"}
-												</Text>
-												<Text style={styles.helpText}>
-													Stage Point:{" "}
-													{item.left ? formatScore(item.left.stagePoint) : "-"}
 												</Text>
 												{item.left?.isFake && player.shooter_id !== null ? (
 													<Pressable
@@ -780,35 +795,46 @@ export default function PlayerDetailScreen() {
 														return null;
 													})(),
 													item.right?.isFake && styles.fakeStageRecord,
+													item.right?.isPrediction && styles.predictedStageRecord,
 												]}
 											>
+												{item.right?.isPrediction ? (
+													<Text style={styles.predictedRecordLabel}>PREDICTED</Text>
+												) : null}
 												{item.right?.isFake ? (
 													<Text style={styles.fakeRecordLabel}>FAKE RECORD</Text>
 												) : null}
 												<Text style={styles.helpText}>
-													Factor: {item.right?.factor ?? "-"}
+													{item.right?.isPrediction ? "Predicted HF" : "Factor"}:{" "}
+													{item.right?.factor ?? "-"}
 												</Text>
+												{!item.right?.isPrediction ? (
+													<>
+														<Text style={styles.helpText}>
+															Pts: {item.right?.pts ?? "-"}
+														</Text>
+														<Text style={styles.helpText}>
+															A/C/D:{" "}
+															{item.right
+																? `${item.right.a}/${item.right.c}/${item.right.d}`
+																: "-"}
+														</Text>
+														<Text style={styles.helpText}>
+															MI/NS/PE:{" "}
+															{item.right
+																? `${item.right.mi}/${item.right.ns}/${item.right.pe}`
+																: "-"}
+														</Text>
+														<Text style={styles.helpText}>
+															Time: {item.right?.time ?? "-"}
+														</Text>
+													</>
+												) : null}
 												<Text style={styles.helpText}>
-													Pts: {item.right?.pts ?? "-"}
-												</Text>
-												<Text style={styles.helpText}>
-													A/C/D:{" "}
-													{item.right
-														? `${item.right.a}/${item.right.c}/${item.right.d}`
-														: "-"}
-												</Text>
-												<Text style={styles.helpText}>
-													MI/NS/PE:{" "}
-													{item.right
-														? `${item.right.mi}/${item.right.ns}/${item.right.pe}`
-														: "-"}
-												</Text>
-												<Text style={styles.helpText}>
-													Time: {item.right?.time ?? "-"}
-												</Text>
-												<Text style={styles.helpText}>
-													Stage Point:{" "}
-													{item.right
+													{item.right?.isPrediction
+														? "Predicted Stage Points"
+														: "Stage Point"}:{" "}
+													{item.right?.stagePoint !== undefined
 														? formatScore(item.right.stagePoint)
 														: "-"}
 												</Text>
@@ -845,6 +871,19 @@ export default function PlayerDetailScreen() {
 						) : (
 							<>
 								<Text style={styles.stageTitle}>Stage Details</Text>
+								{player.prediction?.status === "predicted" ? (
+									<Text style={styles.helpText}>
+										Prediction basis: {player.prediction.n} completed stages; average relative HF{" "}
+										{player.prediction.averageRelativeHF?.toFixed(4) ?? "-"}; shrinkage λ{" "}
+										{player.prediction.lambda.toFixed(4)}; k {player.prediction.k}; prior{" "}
+										{player.prediction.priorRelativeHF.toFixed(4)}; predicted relative HF{" "}
+										{player.prediction.predictedRelativeHF?.toFixed(4) ?? "-"}
+									</Text>
+								) : player.prediction?.status === "unavailable" ? (
+									<Text style={styles.helpText}>
+										Prediction unavailable: {player.prediction.reason ?? "unknown_reason"}
+									</Text>
+								) : null}
 								<FlatList
 									data={player.stageResult}
 									keyExtractor={(item) => `stage-${item.stage}`}
@@ -854,25 +893,41 @@ export default function PlayerDetailScreen() {
 											style={[
 												styles.stageItem,
 												item.isFake && styles.fakeStageRecord,
+												item.isPrediction && styles.predictedStageRecord,
 											]}
 										>
 											<Text style={styles.stageHeading}>
 												Stage {item.stage}
 											</Text>
+											{item.isPrediction ? (
+												<Text style={styles.predictedRecordLabel}>PREDICTED</Text>
+											) : null}
 											{item.isFake ? (
 												<Text style={styles.fakeRecordLabel}>FAKE RECORD</Text>
 											) : null}
-											<Text style={styles.helpText}>Factor: {item.factor}</Text>
-											<Text style={styles.helpText}>Pts: {item.pts}</Text>
 											<Text style={styles.helpText}>
-												A/C/D: {item.a}/{item.c}/{item.d}
+												{item.isPrediction ? "Predicted HF" : "Factor"}: {item.factor}
 											</Text>
+											{item.isPrediction && item.predictionDetails?.baselineHF !== undefined ? (
+												<Text style={styles.helpText}>
+													Reference baseline HF (B): {item.predictionDetails.baselineHF.toFixed(4)}
+												</Text>
+											) : null}
+											{!item.isPrediction ? (
+												<>
+													<Text style={styles.helpText}>Pts: {item.pts}</Text>
+													<Text style={styles.helpText}>
+														A/C/D: {item.a}/{item.c}/{item.d}
+													</Text>
+													<Text style={styles.helpText}>
+														MI/NS/PE: {item.mi}/{item.ns}/{item.pe}
+													</Text>
+													<Text style={styles.helpText}>Time: {item.time}</Text>
+												</>
+											) : null}
 											<Text style={styles.helpText}>
-												MI/NS/PE: {item.mi}/{item.ns}/{item.pe}
-											</Text>
-											<Text style={styles.helpText}>Time: {item.time}</Text>
-											<Text style={styles.helpText}>
-												Stage Point: {formatScore(item.stagePoint)}
+												{item.isPrediction ? "Predicted Stage Points" : "Stage Point"}:{" "}
+												{item.stagePoint !== undefined ? formatScore(item.stagePoint) : "Unavailable"}
 											</Text>
 											{item.isFake && player.shooter_id !== null ? (
 												<Pressable
@@ -1099,6 +1154,11 @@ const styles = StyleSheet.create({
 		borderColor: "#d92d20",
 		borderWidth: 2,
 	},
+	predictedStageRecord: {
+		borderColor: "#b7791f",
+		borderWidth: 2,
+		backgroundColor: "#fff8e7",
+	},
 	stageListContent: {
 		paddingBottom: 18,
 		gap: 8,
@@ -1118,6 +1178,11 @@ const styles = StyleSheet.create({
 	},
 	fakeRecordLabel: {
 		color: "#b42318",
+		fontSize: 11,
+		fontWeight: "700",
+	},
+	predictedRecordLabel: {
+		color: "#8a5a00",
 		fontSize: 11,
 		fontWeight: "700",
 	},
