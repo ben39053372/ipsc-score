@@ -9,6 +9,7 @@ import {
 	Platform,
 	Pressable,
 	StyleSheet,
+	Switch,
 	Text,
 	TextInput,
 	View,
@@ -164,6 +165,7 @@ export default function PlayerDetailScreen() {
 	const [compareTargetShooterId, setCompareTargetShooterId] = useState<
 		number | null
 	>(null);
+	const [showPredictedStages, setShowPredictedStages] = useState(true);
 	const [compareError, setCompareError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -450,11 +452,15 @@ export default function PlayerDetailScreen() {
 			{ stage: number; left?: StageResult; right?: StageResult }
 		>();
 
-		for (const stage of player.stageResult) {
+		for (const stage of player.stageResult.filter(
+			(record) => showPredictedStages || !record.isPrediction,
+		)) {
 			stageMap.set(stage.stage, { stage: stage.stage, left: stage });
 		}
 
-		for (const stage of comparePlayer.stageResult) {
+		for (const stage of comparePlayer.stageResult.filter(
+			(record) => showPredictedStages || !record.isPrediction,
+		)) {
 			const current = stageMap.get(stage.stage);
 			if (current) {
 				current.right = stage;
@@ -464,7 +470,15 @@ export default function PlayerDetailScreen() {
 		}
 
 		return [...stageMap.values()].sort((a, b) => a.stage - b.stage);
-	}, [comparePlayer, player]);
+	}, [comparePlayer, player, showPredictedStages]);
+
+	const visibleStageResults = useMemo(
+		() =>
+			player?.stageResult.filter(
+				(stage) => showPredictedStages || !stage.isPrediction,
+			) ?? [],
+		[player, showPredictedStages],
+	);
 
 	useEffect(() => {
 		setCompareInput("");
@@ -617,6 +631,24 @@ export default function PlayerDetailScreen() {
 					<Text style={styles.errorText}>{removeFakeError}</Text>
 				) : null}
 
+				<View style={styles.predictionToggleRow}>
+					<View style={styles.predictionToggleTextWrap}>
+						<Text style={styles.predictionToggleLabel}>Show predicted stages</Text>
+						<Text style={styles.helpText}>
+							{showPredictedStages
+								? "Predicted stages are marked with a yellow/black hazard border"
+								: "Predicted stage cards are hidden"}
+						</Text>
+					</View>
+					<Switch
+						accessibilityLabel="Show predicted stage results"
+						value={showPredictedStages}
+						onValueChange={setShowPredictedStages}
+						trackColor={{ false: "#c7d5eb", true: "#8db4ed" }}
+						thumbColor={showPredictedStages ? "#245fb7" : "#f4f4f5"}
+					/>
+				</View>
+
 				<View style={styles.compareControlRow}>
 					<TextInput
 						style={styles.compareInput}
@@ -704,20 +736,26 @@ export default function PlayerDetailScreen() {
 										<View style={styles.compareColumns}>
 											<View
 												style={[
-													styles.compareCard,
-													(() => {
-														const leftPoint = item.left?.stagePoint ?? -1;
-														const rightPoint = item.right?.stagePoint ?? -1;
-														if (leftPoint > rightPoint)
-															return styles.compareCardBetter;
-														if (leftPoint < rightPoint)
-															return styles.compareCardWorse;
-														return null;
-													})(),
-													item.left?.isFake && styles.fakeStageRecord,
-													item.left?.isPrediction && styles.predictedStageRecord,
+													styles.compareCardFrame,
+													item.left?.isPrediction && styles.predictionHazardFrame,
 												]}
 											>
+												<View
+													style={[
+														styles.compareCard,
+														(() => {
+															const leftPoint = item.left?.stagePoint ?? -1;
+															const rightPoint = item.right?.stagePoint ?? -1;
+															if (leftPoint > rightPoint)
+																return styles.compareCardBetter;
+															if (leftPoint < rightPoint)
+																return styles.compareCardWorse;
+															return null;
+														})(),
+														item.left?.isFake && styles.fakeStageRecord,
+														item.left?.isPrediction && styles.predictedStageRecord,
+													]}
+												>
 												{item.left?.isPrediction ? (
 													<Text style={styles.predictedRecordLabel}>PREDICTED</Text>
 												) : null}
@@ -781,23 +819,30 @@ export default function PlayerDetailScreen() {
 														</Text>
 													</Pressable>
 												) : null}
+												</View>
 											</View>
 											<View
 												style={[
-													styles.compareCard,
-													(() => {
-														const leftPoint = item.left?.stagePoint ?? -1;
-														const rightPoint = item.right?.stagePoint ?? -1;
-														if (rightPoint > leftPoint)
-															return styles.compareCardBetter;
-														if (rightPoint < leftPoint)
-															return styles.compareCardWorse;
-														return null;
-													})(),
-													item.right?.isFake && styles.fakeStageRecord,
-													item.right?.isPrediction && styles.predictedStageRecord,
+													styles.compareCardFrame,
+													item.right?.isPrediction && styles.predictionHazardFrame,
 												]}
 											>
+												<View
+													style={[
+														styles.compareCard,
+														(() => {
+															const leftPoint = item.left?.stagePoint ?? -1;
+															const rightPoint = item.right?.stagePoint ?? -1;
+															if (rightPoint > leftPoint)
+																return styles.compareCardBetter;
+															if (rightPoint < leftPoint)
+																return styles.compareCardWorse;
+															return null;
+														})(),
+														item.right?.isFake && styles.fakeStageRecord,
+														item.right?.isPrediction && styles.predictedStageRecord,
+													]}
+												>
 												{item.right?.isPrediction ? (
 													<Text style={styles.predictedRecordLabel}>PREDICTED</Text>
 												) : null}
@@ -863,6 +908,7 @@ export default function PlayerDetailScreen() {
 														</Text>
 													</Pressable>
 												) : null}
+												</View>
 											</View>
 										</View>
 									</View>
@@ -885,17 +931,23 @@ export default function PlayerDetailScreen() {
 									</Text>
 								) : null}
 								<FlatList
-									data={player.stageResult}
+									data={visibleStageResults}
 									keyExtractor={(item) => `stage-${item.stage}`}
 									contentContainerStyle={styles.stageListContent}
 									renderItem={({ item }) => (
 										<View
 											style={[
-												styles.stageItem,
-												item.isFake && styles.fakeStageRecord,
-												item.isPrediction && styles.predictedStageRecord,
+												styles.stageItemFrame,
+												item.isPrediction && styles.predictionHazardFrame,
 											]}
 										>
+											<View
+												style={[
+													styles.stageItem,
+													item.isFake && styles.fakeStageRecord,
+													item.isPrediction && styles.predictedStageRecord,
+												]}
+											>
 											<Text style={styles.stageHeading}>
 												Stage {item.stage}
 											</Text>
@@ -952,6 +1004,7 @@ export default function PlayerDetailScreen() {
 													</Text>
 												</Pressable>
 											) : null}
+											</View>
 										</View>
 									)}
 								/>
@@ -1090,6 +1143,21 @@ const styles = StyleSheet.create({
 		color: "#1d2f4c",
 		marginBottom: 8,
 	},
+	predictionToggleRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: 12,
+		marginBottom: 8,
+	},
+	predictionToggleTextWrap: {
+		flex: 1,
+		gap: 2,
+	},
+	predictionToggleLabel: {
+		color: "#1d2f4c",
+		fontWeight: "600",
+	},
 	compareControlRow: {
 		flexDirection: "row",
 		alignItems: "center",
@@ -1133,6 +1201,10 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		gap: 8,
 	},
+	compareCardFrame: {
+		flex: 1,
+		borderRadius: 11,
+	},
 	compareCard: {
 		flex: 1,
 		borderWidth: 1,
@@ -1155,9 +1227,18 @@ const styles = StyleSheet.create({
 		borderWidth: 2,
 	},
 	predictedStageRecord: {
-		borderColor: "#b7791f",
+		borderColor: "#171717",
 		borderWidth: 2,
 		backgroundColor: "#fff8e7",
+		opacity: 0.72,
+	},
+	predictionHazardFrame: {
+		backgroundColor: "#f4c20d",
+		padding: 3,
+		borderRadius: 12,
+	},
+	stageItemFrame: {
+		borderRadius: 13,
 	},
 	stageListContent: {
 		paddingBottom: 18,

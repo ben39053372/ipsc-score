@@ -9,6 +9,7 @@ import {
 	ScrollView,
 	SectionList,
 	StyleSheet,
+	Switch,
 	Text,
 	TextInput,
 	View,
@@ -136,12 +137,19 @@ const createStageRecord = (
 	};
 };
 
-const rankGroup = (groupResults: ShooterScore[]): ShooterScore[] => {
+const rankGroup = (
+	groupResults: ShooterScore[],
+	includePredictions = false,
+): ShooterScore[] => {
 	const rankedPlayers = groupResults
 		.map((player) => ({
 			...player,
 			totalStagePoint: player.stageResult.reduce(
-				(total, stage) => total + (stage.isPrediction ? 0 : stage.stagePoint ?? 0),
+				(total, stage) =>
+					total +
+					(stage.isPrediction && !includePredictions
+						? 0
+						: stage.stagePoint ?? 0),
 				0,
 			),
 		}))
@@ -293,6 +301,8 @@ export default function LeaderboardScreen() {
 	const [scoreGroups, setScoreGroups] = useState<ScoreGroup[]>([]);
 	const [scoreLoading, setScoreLoading] = useState(false);
 	const [scoreError, setScoreError] = useState<string | null>(null);
+	const [includePredictionsInRanking, setIncludePredictionsInRanking] =
+		useState(false);
 	const [selectedGroupName, setSelectedGroupName] = useState<string | null>(
 		null,
 	);
@@ -401,10 +411,12 @@ export default function LeaderboardScreen() {
 		return [
 			{
 				title: group.groupName,
-				data: group.groupResults,
+				data: includePredictionsInRanking
+					? rankGroup(group.groupResults, true)
+					: group.groupResults,
 			},
 		];
-	}, [scoreGroups, selectedGroupName]);
+	}, [includePredictionsInRanking, scoreGroups, selectedGroupName]);
 
 	const shooterIdPreview = useMemo(() => {
 		const shooterId = Number(shooterIdInput.trim());
@@ -824,6 +836,25 @@ export default function LeaderboardScreen() {
 						) : null}
 					</View>
 				) : null}
+				<View style={styles.predictionToggleRow}>
+					<View style={styles.predictionToggleTextWrap}>
+						<Text style={styles.predictionToggleLabel}>
+							Include predicted points in ranking
+						</Text>
+						<Text style={styles.helpText}>
+							{includePredictionsInRanking
+								? "Ranking includes predicted Stage Points"
+								: "Ranking uses actual scores only"}
+						</Text>
+					</View>
+					<Switch
+						accessibilityLabel="Include predicted points in ranking"
+						value={includePredictionsInRanking}
+						onValueChange={setIncludePredictionsInRanking}
+						trackColor={{ false: "#c7d5eb", true: "#8db4ed" }}
+						thumbColor={includePredictionsInRanking ? "#245fb7" : "#f4f4f5"}
+					/>
+				</View>
 
 				<SectionList
 					sections={scoreSections}
@@ -866,6 +897,14 @@ export default function LeaderboardScreen() {
 								</View>
 							</View>
 							<View style={styles.scoreValues}>
+								{includePredictionsInRanking &&
+								item.stageResult.some(
+									(stage) => stage.isPrediction && stage.stagePoint !== undefined,
+								) ? (
+									<Text style={styles.predictedRankingLabel}>
+										INCLUDES PREDICTION
+									</Text>
+								) : null}
 								<Text style={styles.scoreValue}>
 									{formatScore(item.totalStagePoint)}
 								</Text>
@@ -1066,6 +1105,22 @@ const styles = StyleSheet.create({
 	groupSelectorWrap: {
 		marginBottom: 8,
 	},
+	predictionToggleRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: 12,
+		paddingVertical: 8,
+		paddingHorizontal: 2,
+	},
+	predictionToggleTextWrap: {
+		flex: 1,
+		gap: 2,
+	},
+	predictionToggleLabel: {
+		color: "#1d2f4c",
+		fontWeight: "600",
+	},
 	groupSelectorLabel: {
 		fontSize: 12,
 		color: "#566984",
@@ -1165,6 +1220,11 @@ const styles = StyleSheet.create({
 	scoreValue: {
 		fontWeight: "700",
 		color: "#1d2f4c",
+	},
+	predictedRankingLabel: {
+		color: "#8a5a00",
+		fontSize: 9,
+		fontWeight: "700",
 	},
 	percent: {
 		fontSize: 12,
